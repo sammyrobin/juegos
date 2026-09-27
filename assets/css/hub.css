@@ -1,0 +1,110 @@
+/* JUEGOS — arcade home (/juegos and /juegos/en). */
+
+.site-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 16px var(--gutter);
+  border-bottom: var(--border);
+  background: var(--c-paper);
+}
+
+.brand { display: inline-flex; align-items: center; gap: 12px; color: var(--c-ink); text-decoration: none; }
+.brand img { width: 44px; height: 44px; }
+.brand-name { font: 900 1.9rem/1 var(--f-display); letter-spacing: .04em; text-transform: uppercase; }
+
+.site-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.site-nav a {
+  padding: 8px 14px; border: 2px solid transparent; border-radius: 8px;
+  color: var(--c-ink); font-weight: 700; text-decoration: none;
+}
+.site-nav a:hover { border-color: var(--c-ink); }
+.site-nav .lang { border-color: var(--c-ink); background: var(--c-yellow); }
+
+/* ---- Hero: an arcade marquee ------------------------------------------ */
+.hero { padding: clamp(40px, 8vw, 88px) var(--gutter) clamp(32px, 6vw, 56px); text-align: center; }
+
+.marquee {
+  display: inline-block; position: relative;
+  padding: clamp(14px, 3vw, 24px) clamp(22px, 5vw, 48px);
+  background: var(--c-ink); color: var(--c-cream);
+  border-radius: 18px; box-shadow: 8px 8px 0 var(--c-red);
+}
+/* Row of bulbs above and below the sign. */
+.marquee::before, .marquee::after {
+  content: ""; position: absolute; left: 18px; right: 18px; height: 8px;
+  background: radial-gradient(circle, var(--c-yellow) 3px, transparent 4px) 0 0 / 22px 8px repeat-x;
+  animation: bulbs 1.2s steps(2) infinite;
+}
+.marquee::before { top: 6px; }
+.marquee::after { bottom: 6px; animation-delay: .6s; }
+@keyframes bulbs { 50% { opacity: .35; } }
+
+.hero h1 {
+  margin: 0;
+  font: 900 clamp(3rem, 12vw, 7.5rem)/.9 var(--f-display);
+  letter-spacing: .03em; text-transform: uppercase;
+}
+.hero h1 span { color: var(--c-yellow); }
+
+.hero p { max-width: 38rem; margin: 28px auto 0; font-size: clamp(1.05rem, 2.2vw, 1.25rem); color: var(--c-muted); }
+
+/* ---- Game grid ---------------------------------------------------------- */
+.games { padding: 0 var(--gutter) clamp(48px, 8vw, 96px); }
+.games h2 {
+  max-width: 1120px; margin: 0 auto 20px;
+  font: 900 clamp(1.8rem, 4vw, 2.6rem)/1 var(--f-display); text-transform: uppercase; letter-spacing: .03em;
+}
+.game-grid {
+  max-width: 1120px; margin: 0 auto; padding: 0; list-style: none;
+  display: grid; gap: 24px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+}
+
+.game-card {
+  display: flex; flex-direction: column; height: 100%;
+  background: var(--c-paper); border: var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.game-card .cover { position: relative; aspect-ratio: 16 / 10; border-bottom: var(--border); background: #3B2A77; overflow: hidden; }
+.game-card .cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.game-card:hover .cover img { transform: scale(1.04); }
+.cover-title {
+  position: absolute; left: 14px; bottom: 12px; margin: 0;
+  font: 900 clamp(2rem, 5vw, 2.6rem)/.9 var(--f-display); text-transform: uppercase; font-style: italic; letter-spacing: .02em;
+  color: var(--c-yellow);
+  text-shadow: 3px 3px 0 var(--c-ink), -1px -1px 0 var(--c-ink), 1px -1px 0 var(--c-ink), -1px 1px 0 var(--c-ink);
+}
+.cover-badge { position: absolute; top: 12px; left: 12px; background: var(--c-yellow); }
+
+.game-body { display: flex; flex-direction: column; gap: 12px; flex: 1; padding: 20px; }
+.game-body h3 { margin: 0; font: 900 1.9rem/1 var(--f-display); text-transform: uppercase; letter-spacing: .03em; }
+.game-body p { margin: 0; color: var(--c-muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.game-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: auto; padding-top: 8px; }
+
+/* "Coming soon" slots: dashed, muted, clearly not clickable. */
+.game-card.soon { background: transparent; border-style: dashed; box-shadow: none; }
+.game-card.soon .cover {
+  display: grid; place-items: center;
+  background: repeating-linear-gradient(-45deg, #FFE9C7 0 16px, var(--c-cream) 16px 32px);
+  border-bottom-style: dashed;
+}
+.soon-mark {
+  display: grid; place-items: center; width: 96px; height: 96px;
+  font: 900 3.6rem/1 var(--f-display); color: var(--c-ink);
+  background: var(--c-paper); border: var(--border); border-radius: 50%;
+}
+
+/* ---- Footer ------------------------------------------------------------- */
+.site-footer {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 24px var(--gutter);
+  border-top: var(--border); background: var(--c-ink); color: var(--c-cream);
+}
+.site-footer p { margin: 0; }
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 16px; }
+.site-footer a { color: var(--c-cream); font-weight: 700; }
+.site-footer a:focus-visible { outline-color: var(--c-yellow); }
+
+@media (max-width: 560px) {
+  .site-header { justify-content: center; }
+  .game-actions .btn { flex: 1; }
+}

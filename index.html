@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juegos · Samuel Torres</title>
+<meta name="description" content="Sala de juegos arcade de Samuel Torres: juegos hechos a mano con HTML, CSS y JavaScript puro. Empieza con TURBO PISTA, una carrera infinita en pseudo-3D.">
+<meta name="theme-color" content="#FFF3E3">
+<link rel="canonical" href="https://samueltorres.dev/juegos/">
+<link rel="alternate" hreflang="es" href="https://samueltorres.dev/juegos/">
+<link rel="alternate" hreflang="en" href="https://samueltorres.dev/juegos/en/">
+<link rel="alternate" hreflang="x-default" href="https://samueltorres.dev/juegos/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Juegos · Samuel Torres">
+<meta property="og:description" content="Juegos arcade hechos con HTML, CSS y JavaScript puro. Juega TURBO PISTA.">
+<meta property="og:url" content="https://samueltorres.dev/juegos/">
+<meta property="og:image" content="https://samueltorres.dev/juegos/assets/img/turbo-pista-og.png">
+<meta property="og:locale" content="es_MX">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/big-shoulders-display-900.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/hub.css">
+</head>
+<body>
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+<header class="site-header">
+  <a class="brand" href="./" aria-label="Juegos, inicio">
+    <img src="assets/img/favicon.svg" alt="" width="44" height="44">
+    <span class="brand-name">Juegos</span>
+  </a>
+  <nav class="site-nav" aria-label="Principal">
+    <a href="/">Portafolio</a>
+    <a href="/garage/">Garage</a>
+    <a class="lang" href="en/" hreflang="en" lang="en">English</a>
+  </nav>
+</header>
+
+<main id="contenido">
+  <section class="hero" aria-labelledby="titulo">
+    <div class="marquee">
+      <h1 id="titulo">Sala de <span>juegos</span></h1>
+    </div>
+    <p>Juegos arcade hechos a mano con HTML, CSS y JavaScript puro: sin frameworks, sin instalar nada. Abre, juega y vuelve cuando quieras superar tu récord.</p>
+  </section>
+
+  <section class="games" aria-labelledby="catalogo">
+    <h2 id="catalogo">Elige tu juego</h2>
+    <ul class="game-grid">
+      <li>
+        <article class="game-card">
+          <div class="cover">
+            <img src="assets/img/turbo-pista-cover.svg" alt="Pista naranja de juguete hacia el horizonte con un auto de carreras rojo y un rayo de nitro" width="640" height="400">
+            <p class="cover-title" aria-hidden="true">Turbo Pista</p>
+            <span class="chip cover-badge">Nuevo</span>
+          </div>
+          <div class="game-body">
+            <h3>Turbo Pista</h3>
+            <ul class="tags" aria-label="Etiquetas">
+              <li class="chip">Carreras</li>
+              <li class="chip">Pseudo-3D</li>
+              <li class="chip">Celular y PC</li>
+            </ul>
+            <p>Carrera infinita sobre una pista naranja de juguete. Esquiva conos, aceite, rivales y huecos; junta monedas, activa el nitro y vuela en rampas y loops mientras el día se vuelve noche.</p>
+            <div class="game-actions">
+              <a class="btn btn-primary" href="pista/">Jugar</a>
+              <a class="btn" href="https://github.com/sammyrobin/juegos" target="_blank" rel="noopener">Ver código</a>
+            </div>
+          </div>
+        </article>
+      </li>
+      <li>
+        <article class="game-card soon" aria-label="Próximamente: nuevo juego">
+          <div class="cover"><span class="soon-mark" aria-hidden="true">?</span></div>
+          <div class="game-body">
+            <h3>Próximamente</h3>
+            <p>Un nuevo juego está en el taller. Mientras tanto, supera tu récord en Turbo Pista.</p>
+          </div>
+        </article>
+      </li>
+      <li>
+        <article class="game-card soon" aria-label="Próximamente: nuevo juego">
+          <div class="cover"><span class="soon-mark" aria-hidden="true">?</span></div>
+          <div class="game-body">
+            <h3>Próximamente</h3>
+            <p>Espacio reservado para el siguiente juego de la sala.</p>
+          </div>
+        </article>
+      </li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>Hecho por Samuel Torres con Canvas 2D y Web Audio.</p>
+  <nav aria-label="Enlaces">
+    <a href="/">Portafolio</a>
+    <a href="/garage/">Garage</a>
+    <a href="https://github.com/sammyrobin/juegos" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+</footer>
+</body>
+</html>

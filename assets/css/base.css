@@ -1,0 +1,92 @@
+/* JUEGOS — shared tokens, fonts and buttons (same look as /garage).
+   Contrast (WCAG) on cream #FFF3E3: ink 16.8:1, muted 6.9:1, red 4.7:1, blue 5.5:1.
+   White on red 5.1:1, white on blue 6.0:1, ink on yellow 12.2:1. Yellow is never text on light. */
+
+/* Self-hosted OFL fonts (licenses in assets/fonts/OFL-*.txt). */
+@font-face { font-family: "Big Shoulders Display"; src: url("../fonts/big-shoulders-display-900.woff2") format("woff2"); font-weight: 900; font-display: swap; }
+@font-face { font-family: "Big Shoulders Display"; src: url("../fonts/big-shoulders-display-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Outfit"; src: url("../fonts/outfit-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Outfit"; src: url("../fonts/outfit-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Outfit"; src: url("../fonts/outfit-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Outfit"; src: url("../fonts/outfit-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+
+:root {
+  --c-cream: #FFF3E3;
+  --c-paper: #FFFFFF;
+  --c-ink: #141414;
+  --c-muted: #5C5347;
+  --c-red: #DD0200;
+  --c-red-dark: #B00200;
+  --c-blue: #1F4BFF;
+  --c-yellow: #FFCC00;
+  --c-orange: #FF8A1F;
+  --c-night: #0B0B12;
+
+  --f-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --f-sans: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --border: 3px solid var(--c-ink);
+  --shadow: 4px 4px 0 var(--c-ink);
+  --shadow-lg: 6px 6px 0 var(--c-ink);
+  --radius: 14px;
+  --gutter: clamp(16px, 4vw, 48px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-cream);
+  color: var(--c-ink);
+  font: 400 1rem/1.6 var(--f-sans);
+}
+
+a { color: var(--c-blue); text-underline-offset: 3px; }
+
+:focus-visible { outline: 3px solid var(--c-blue); outline-offset: 3px; }
+
+img, svg { max-width: 100%; height: auto; display: block; }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute; left: 16px; top: -60px; z-index: 100;
+  background: var(--c-ink); color: var(--c-paper);
+  padding: 10px 16px; border-radius: 8px; font-weight: 700;
+}
+.skip-link:focus { top: 16px; }
+
+/* Chunky arcade buttons: thick ink border + hard shadow that "presses" on click. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5em;
+  min-height: 48px; padding: 10px 22px;
+  font: 800 1.05rem/1 var(--f-sans); text-transform: uppercase; letter-spacing: .04em; text-decoration: none;
+  color: var(--c-ink); background: var(--c-paper);
+  border: var(--border); border-radius: 10px; box-shadow: var(--shadow);
+  cursor: pointer; user-select: none;
+  transition: transform .08s ease, box-shadow .08s ease, background-color .15s ease;
+}
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--c-ink); }
+.btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--c-ink); }
+.btn-primary { color: #fff; background: var(--c-red); }
+.btn-primary:hover { background: var(--c-red-dark); }
+.btn-blue { color: #fff; background: var(--c-blue); }
+.btn-yellow { background: var(--c-yellow); }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: .55; cursor: not-allowed; transform: none; box-shadow: var(--shadow); }
+
+.chip {
+  display: inline-block; padding: 2px 10px;
+  font: 700 .78rem/1.6 var(--f-sans); text-transform: uppercase; letter-spacing: .06em;
+  border: 2px solid var(--c-ink); border-radius: 999px; background: var(--c-paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

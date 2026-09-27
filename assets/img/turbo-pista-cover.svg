@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-labelledby="t">
+  <title id="t">Orange toy track running to the horizon with a red race car and a nitro bolt</title>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B2A77"/><stop offset=".55" stop-color="#FF6B6B"/><stop offset="1" stop-color="#FFB35C"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F2701A"/><stop offset="1" stop-color="#FF8A1F"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#sky)"/>
+  <circle cx="400" cy="178" r="70" fill="#FFD166"/>
+  <path d="M0 190 60 150l70 30 90-50 80 60 60-30 90 40 70-45 120 55V210H0z" fill="#6B3A6E"/>
+  <rect y="186" width="640" height="214" fill="#7FA35A"/>
+  <g fill="#76984F"><rect y="196" width="640" height="10"/><rect y="220" width="640" height="16"/><rect y="258" width="640" height="24"/><rect y="316" width="640" height="34"/></g>
+  <path d="M292 186h56l250 214H42z" fill="#2C3FBF"/>
+  <path d="M298 186h44l212 214H86z" fill="url(#road)"/>
+  <g fill="#FFCC00"><path d="M318 190h4l2 12h-8z"/><path d="M315 214h10l4 26h-18z"/><path d="M309 262h22l7 48h-36z"/><path d="M300 336h40l9 64h-58z"/></g>
+  <g stroke="#141414" stroke-width="5" stroke-linejoin="round">
+    <rect x="236" y="330" width="40" height="58" rx="10" fill="#141414"/>
+    <rect x="364" y="330" width="40" height="58" rx="10" fill="#141414"/>
+    <path d="M254 300h132l18 48c4 10-2 20-12 20H248c-10 0-16-10-12-20z" fill="#DD0200"/>
+    <path d="M276 262h88l20 40H256z" fill="#DD0200"/>
+    <path d="M286 272h68l12 24h-92z" fill="#1B2350"/>
+    <path d="M232 254h176v16H232z" fill="#141414"/>
+    <rect x="254" y="318" width="40" height="14" rx="5" fill="#FFCC00"/>
+    <rect x="346" y="318" width="40" height="14" rx="5" fill="#FFCC00"/>
+  </g>
+  <g transform="translate(468 70) rotate(12)" stroke="#141414" stroke-width="5" stroke-linejoin="round">
+    <circle r="40" fill="#1F4BFF"/>
+    <path d="M6-26-16 4h14l-8 24 26-32H2l10-22z" fill="#FFCC00"/>
+  </g>
+  <g transform="translate(150 100)" stroke="#141414" stroke-width="4"><circle r="20" fill="#FFCC00"/><circle r="9" fill="none"/></g>
+  <g transform="translate(196 66)" stroke="#141414" stroke-width="4"><ellipse rx="10" ry="18" fill="#FFCC00"/></g>
+</svg>

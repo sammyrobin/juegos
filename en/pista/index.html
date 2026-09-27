@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TURBO PISTA · Games · Samuel Torres</title>
+<meta name="description" content="TURBO PISTA: an endless pseudo-3D race on an orange toy track. Dodge obstacles, grab coins, fire the nitro and loop the loop. Free in the browser, on mobile and desktop.">
+<meta name="theme-color" content="#141414">
+<link rel="canonical" href="https://samueltorres.dev/juegos/en/pista/">
+<link rel="alternate" hreflang="es" href="https://samueltorres.dev/juegos/pista/">
+<link rel="alternate" hreflang="en" href="https://samueltorres.dev/juegos/en/pista/">
+<link rel="alternate" hreflang="x-default" href="https://samueltorres.dev/juegos/pista/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="TURBO PISTA">
+<meta property="og:description" content="An endless race on a toy track. Can you beat my score?">
+<meta property="og:url" content="https://samueltorres.dev/juegos/en/pista/">
+<meta property="og:image" content="https://samueltorres.dev/juegos/assets/img/turbo-pista-og.png">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../../assets/fonts/big-shoulders-display-900.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../pista/css/pista.css">
+<script type="module" src="../../pista/js/main.js"></script>
+</head>
+<body class="is-menu">
+<div class="game" id="game">
+  <canvas id="screen" role="img" aria-label="TURBO PISTA race track"></canvas>
+  <div class="touch-surface" id="touch" aria-hidden="true"></div>
+
+  <div class="topbar">
+    <a class="back-link" href="../">← Games</a>
+    <a class="lang-link" href="../../pista/" hreflang="es" lang="es">ES</a>
+    <button class="icon-btn" id="btn-sound" type="button" aria-pressed="false" aria-label="Mute sound">
+      <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none"/></svg>
+      <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m16 9 6 6m0-6-6 6" fill="none"/></svg>
+    </button>
+  </div>
+
+  <header class="hud" id="hud" hidden>
+    <div class="hud-score"><span class="hud-label">Score</span><strong id="hud-score">0</strong></div>
+    <dl class="hud-stats">
+      <div><dt>Distance</dt><dd><span id="hud-dist">0</span> m</dd></div>
+      <div><dt>Coins</dt><dd id="hud-coins">0</dd></div>
+      <div><dt>Speed</dt><dd><span id="hud-speed">0</span> km/h</dd></div>
+      <div><dt>Best</dt><dd id="hud-best">0</dd></div>
+    </dl>
+    <div class="hud-side">
+      <div class="hud-lives" id="hud-lives" role="img" aria-label="3 lives left"><span></span><span></span><span></span></div>
+      <div class="hud-level">Level <strong id="hud-level">1</strong></div>
+      <div class="nitro-meter" id="hud-nitro" aria-hidden="true"><span></span></div>
+    </div>
+    <button class="icon-btn pause-btn" id="btn-pause" type="button" aria-label="Pause">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg>
+    </button>
+  </header>
+
+  <div class="banner" id="banner" aria-hidden="true"></div>
+
+  <div class="countdown" id="countdown" hidden aria-hidden="true">
+    <div class="lights"><span></span><span></span><span></span></div>
+    <p class="count-text" id="count-text">3</p>
+  </div>
+
+  <div class="touch-controls" id="touch-controls" hidden>
+    <button class="touch-btn" id="btn-left" type="button" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8z"/></svg></button>
+    <button class="touch-btn" id="btn-right" type="button" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 8 8-8 8z"/></svg></button>
+  </div>
+
+  <section class="screen" id="screen-start" aria-labelledby="start-title">
+    <div class="panel panel-start">
+      <div class="start-head">
+        <h1 class="logo" id="start-title"><span class="logo-turbo">Turbo</span> <span class="logo-pista">Pista</span></h1>
+        <p class="tagline">An endless race on a toy track. Just left and right!</p>
+      </div>
+      <fieldset class="car-picker">
+        <legend>Pick your car</legend>
+        <div class="cars">
+          <label class="car-option"><input type="radio" name="car" value="0" checked><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Ember</span><span class="car-desc">Sports wedge with a big wing</span></label>
+          <label class="car-option"><input type="radio" name="car" value="1"><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Tide</span><span class="car-desc">Smooth, rounded roadster</span></label>
+          <label class="car-option"><input type="radio" name="car" value="2"><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Spark</span><span class="car-desc">Buggy with giant wheels</span></label>
+          <label class="car-option"><input type="radio" name="car" value="3"><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Eclipse</span><span class="car-desc">Muscle car with neon stripes</span></label>
+        </div>
+      </fieldset>
+      <div class="start-actions">
+        <button class="btn btn-primary btn-big" id="btn-start" type="button">Start</button>
+        <p class="best-line">Best: <strong id="start-best">0</strong></p>
+      </div>
+      <details class="howto">
+        <summary>How to play</summary>
+        <ul>
+          <li><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to move. On a phone, tap the left or right half, swipe, or use the buttons.</li>
+          <li>Dodge cones, rival cars and holes: every crash costs one of your 3 lives. Oil makes you skid.</li>
+          <li>Grab coins <span aria-hidden="true">🟡</span> and nitro bolts <span aria-hidden="true">⚡</span> to go faster and smash through cones.</li>
+          <li>Ramps make you fly and loops spin you around by themselves. Curves push you outwards.</li>
+          <li>Every level is faster and changes the scenery: day, sunset and night. <kbd>Space</kbd> or <kbd>P</kbd> pauses.</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-pause" hidden aria-labelledby="pause-title">
+    <div class="panel panel-small">
+      <h2 id="pause-title">Paused</h2>
+      <div class="stack">
+        <button class="btn btn-primary btn-big" id="btn-resume" type="button">Resume</button>
+        <button class="btn" id="btn-restart" type="button">Restart</button>
+        <button class="btn" id="btn-menu" type="button">Menu</button>
+      </div>
+      <p class="hint">Space or P to resume</p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-over" hidden aria-labelledby="over-title">
+    <div class="panel panel-small">
+      <h2 id="over-title">Race over!</h2>
+      <p class="record-badge" id="over-record" hidden>New best!</p>
+      <p class="final-score"><strong id="over-score">0</strong> <span>points</span></p>
+      <dl class="final-stats">
+        <div><dt>Distance</dt><dd><span id="over-dist">0</span> m</dd></div>
+        <div><dt>Coins</dt><dd id="over-coins">0</dd></div>
+        <div><dt>Level</dt><dd id="over-level">1</dd></div>
+        <div><dt>Best</dt><dd id="over-best">0</dd></div>
+      </dl>
+      <div class="stack">
+        <button class="btn btn-primary btn-big" id="btn-again" type="button">Play again</button>
+        <button class="btn btn-blue" id="btn-share" type="button">Share</button>
+        <button class="btn" id="btn-over-menu" type="button">Change car</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <p class="visually-hidden" id="announcer" aria-live="assertive"></p>
+  <noscript><p class="noscript">TURBO PISTA needs JavaScript turned on.</p></noscript>
+</div>
+</body>
+</html>
