@@ -17,6 +17,10 @@ AddDefaultCharset UTF-8
 
 # Behind Cloudflare Flexible the origin speaks plain HTTP, so Apache's own
 # "add the trailing slash" redirect would point to http://. Do it here with https.
+# /juegos itself (no slash) is outside this file's rewrite context: redirect it here.
+<If "%{REQUEST_URI} == '/juegos'">
+    Redirect 301 https://samueltorres.dev/juegos/
+</If>
 <IfModule mod_rewrite.c>
     RewriteEngine On
     DirectorySlash Off
