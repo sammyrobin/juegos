@@ -31,22 +31,52 @@
   <div class="topbar">
     <a class="back-link" href="../">← Games</a>
     <a class="lang-link" href="../../pista/" hreflang="es" lang="es">ES</a>
-    <button class="icon-btn" id="btn-sound" type="button" aria-pressed="false" aria-label="Mute sound">
-      <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none"/></svg>
-      <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m16 9 6 6m0-6-6 6" fill="none"/></svg>
-    </button>
+    <div class="sound-box">
+      <button class="icon-btn" id="btn-sound" type="button" aria-expanded="false" aria-controls="sound-panel" aria-label="Sound">
+        <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none"/></svg>
+        <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m16 9 6 6m0-6-6 6" fill="none"/></svg>
+      </button>
+      <div class="sound-panel" id="sound-panel" role="group" aria-labelledby="sound-title" hidden>
+        <p class="sound-title" id="sound-title">Sound</p>
+        <div class="sound-row">
+          <label for="vol-music">Music/Engine</label>
+          <input type="range" id="vol-music" min="0" max="100" step="5" value="60">
+          <button class="mute-btn" id="mute-music" type="button" aria-pressed="false" aria-label="Mute music and engine">
+            <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none"/></svg>
+            <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m16 9 6 6m0-6-6 6" fill="none"/></svg>
+          </button>
+        </div>
+        <div class="sound-row">
+          <label for="vol-sfx">Effects</label>
+          <input type="range" id="vol-sfx" min="0" max="100" step="5" value="60">
+          <button class="mute-btn" id="mute-sfx" type="button" aria-pressed="false" aria-label="Mute effects">
+            <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none"/></svg>
+            <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m16 9 6 6m0-6-6 6" fill="none"/></svg>
+          </button>
+        </div>
+        <p class="sound-hint">Saved in this browser.</p>
+      </div>
+    </div>
   </div>
 
   <header class="hud" id="hud" hidden>
     <div class="hud-score"><span class="hud-label">Score</span><strong id="hud-score">0</strong></div>
     <dl class="hud-stats">
       <div><dt>Distance</dt><dd><span id="hud-dist">0</span> m</dd></div>
-      <div><dt>Coins</dt><dd id="hud-coins">0</dd></div>
-      <div><dt>Speed</dt><dd><span id="hud-speed">0</span> km/h</dd></div>
+      <div><dt>Coins</dt><dd><span class="coin-icon" aria-hidden="true"></span><span id="hud-coins">0</span></dd></div>
       <div><dt>Best</dt><dd id="hud-best">0</dd></div>
     </dl>
-    <div class="hud-side">
-      <div class="hud-lives" id="hud-lives" role="img" aria-label="3 lives left"><span></span><span></span><span></span></div>
+    <div class="speedo" id="speedo" role="img" aria-label="Speedometer: 0 km/h">
+      <svg viewBox="0 0 120 68" aria-hidden="true">
+        <path class="speedo-track" d="M12 62a48 48 0 0 1 96 0"/>
+        <path class="speedo-fill" id="speedo-fill" d="M12 62a48 48 0 0 1 96 0" pathLength="100"/>
+        <path class="speedo-ticks" d="M12 62h8M18.4 38l6.9 4M36 20.4l4 6.9M60 14v8M84 20.4l-4 6.9M101.6 38l-6.9 4M108 62h-8"/>
+        <g class="speedo-needle" id="speedo-needle"><path d="M60 62 57.5 59 60 22 62.5 59z"/><circle cx="60" cy="62" r="6"/></g>
+      </svg>
+      <p class="speedo-value"><strong id="hud-speed">0</strong><span>km/h</span></p>
+    </div>
+    <div class="hud-status">
+      <div class="hud-lives" id="hud-lives" role="img" aria-label="3 lives"></div>
       <div class="hud-level">Level <strong id="hud-level">1</strong></div>
       <div class="nitro-meter" id="hud-nitro" aria-hidden="true"><span></span></div>
     </div>
@@ -80,6 +110,7 @@
       <div class="start-actions">
         <button class="btn btn-primary btn-big" id="btn-start" type="button">Start</button>
         <p class="best-line">Best: <strong id="start-best">0</strong></p>
+        <button class="btn btn-yellow btn-ranking" id="btn-ranking" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M9.5 17h5" fill="none"/></svg>Ranking</button>
         <a class="btn btn-blue collection-link" href="/garage/en/">See my real collection</a>
       </div>
       <details class="howto">
@@ -87,10 +118,12 @@
         <ul>
           <li><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to move. On a phone, tap the left or right half, swipe, or use the buttons.</li>
           <li>Every car drives differently: check its speed, acceleration and handling. The launcher fires you off the start.</li>
-          <li>Dodge cones, rival cars and holes: every crash costs one of your 3 lives. Oil makes you skid and the rails throw sparks.</li>
+          <li>Dodge cones, rival cars and holes: every crash costs a life (you start with 3). Oil makes you skid and the rails throw sparks.</li>
           <li>Grab coins <span aria-hidden="true">🟡</span> and nitro bolts <span aria-hidden="true">⚡</span> to go faster and smash through cones.</li>
           <li>Jump between tables and fly through the middle of the fire hoop. Banked curves hold you in and loops spin you around by themselves.</li>
           <li>Every level is faster and is another room of the house: bedroom, living room, kitchen and garden. <kbd>Space</kbd> or <kbd>P</kbd> pauses.</li>
+          <li>Reach 2,000, 5,000, 10,000 and 20,000 m in a single run to unlock four more cars. Number 99 starts with 5 lives.</li>
+          <li>If your score makes the top 20, leave your nickname in the worldwide <strong>ranking</strong>. The sound button keeps music and engine apart from the effects.</li>
         </ul>
       </details>
     </div>
@@ -109,8 +142,10 @@
   </section>
 
   <section class="screen" id="screen-over" hidden aria-labelledby="over-title">
-    <div class="panel panel-small">
+    <div class="panel panel-small panel-over">
+      <div class="over-flag" aria-hidden="true"></div>
       <h2 id="over-title">Race over!</h2>
+      <canvas class="over-car" id="over-car" width="360" height="150" aria-hidden="true"></canvas>
       <p class="record-badge" id="over-record" hidden>New best!</p>
       <p class="final-score"><strong id="over-score">0</strong> <span>points</span></p>
       <dl class="final-stats">
@@ -119,10 +154,33 @@
         <div><dt>Level</dt><dd id="over-level">1</dd></div>
         <div><dt>Best</dt><dd id="over-best">0</dd></div>
       </dl>
+      <p class="unlock-note" id="over-unlock" hidden></p>
+      <form class="rank-form" id="rank-form" hidden novalidate>
+        <p class="rank-form-title" id="rank-form-title">You made the top 20! Type your nickname</p>
+        <div class="rank-form-row">
+          <label class="visually-hidden" for="nick">Nickname</label>
+          <input id="nick" name="nick" type="text" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="3" maxlength="12" pattern="[A-Za-z0-9_]{3,12}" required aria-describedby="nick-help rank-msg">
+          <button class="btn btn-blue" id="nick-send" type="submit">Save</button>
+        </div>
+        <p class="rank-form-help" id="nick-help">3 to 12 letters, numbers or underscores. Only your nickname, points, distance, car and the date are saved.</p>
+        <p class="rank-msg" id="rank-msg" role="status" aria-live="polite"></p>
+      </form>
       <div class="stack">
         <button class="btn btn-primary btn-big" id="btn-again" type="button">Play again</button>
         <button class="btn btn-blue" id="btn-share" type="button">Share</button>
+        <button class="btn btn-yellow btn-ranking" id="btn-over-ranking" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M9.5 17h5" fill="none"/></svg>Ranking</button>
         <button class="btn" id="btn-over-menu" type="button">Change car</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-ranking" hidden aria-labelledby="ranking-title">
+    <div class="panel panel-small panel-ranking">
+      <h2 id="ranking-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M9.5 17h5" fill="none"/></svg>Ranking</h2>
+      <p class="ranking-sub">Top 20 of all players</p>
+      <div class="ranking-body" id="ranking-body" aria-live="polite"></div>
+      <div class="stack">
+        <button class="btn btn-primary btn-big" id="btn-ranking-back" type="button">Back</button>
       </div>
     </div>
   </section>

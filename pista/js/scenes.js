@@ -1,7 +1,9 @@
 // Giant furniture behind the track: every level is a different room of the house.
-// Each room is drawn once per screen size into one wide strip (the wall, its decoration
-// and the furniture standing on the floor). The renderer scrolls it with the curves, so
-// each frame only copies one bitmap.
+// Each room is drawn once per screen size into three wide strips, the parallax layers:
+//   wall   – the wall and what hangs on it (slowest)
+//   mid    – the furniture standing on the floor
+//   front  – a few giant toys and flower pots closer to the camera (fastest)
+// The renderer scrolls them with the curves, so each frame only copies three bitmaps.
 //
 // Sizes use one unit `u` (about half the wall height on screen), so a bed or a sofa looks
 // huge next to the toy track.
@@ -54,6 +56,52 @@ function windowFrame(g, x, top, w, h, u, lw, skyA, skyB, trim, extra) {
   g.strokeStyle = INK; g.lineWidth = lw; g.strokeRect(x - u * 0.035, top - u * 0.035, w + u * 0.07, h + u * 0.07);
   box(g, x - u * 0.1, top + h + u * 0.02, w + u * 0.2, u * 0.07, trim, lw, u * 0.02);
 }
+
+// Big things for the front parallax layer.
+function flowerPot(g, x, b, u, lw, pot, bloom) {
+  const cx = x + u * 0.5;
+  for (const [a, l] of [[-0.7, 0.55], [-0.2, 0.7], [0.3, 0.65], [0.75, 0.5]]) {
+    g.save(); g.translate(cx, b - u * 0.5); g.rotate(a);
+    g.beginPath(); g.ellipse(0, -u * l * 0.5, u * 0.09, u * l * 0.5, 0, 0, Math.PI * 2);
+    g.fillStyle = '#2E9E48'; g.fill(); g.strokeStyle = INK; g.lineWidth = lw; g.stroke();
+    g.restore();
+  }
+  if (bloom) {
+    for (const [dx, dy] of [[-0.18, 0.95], [0.12, 1.12], [0.3, 0.88]]) {
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        circle(g, cx + u * dx + Math.cos(a) * u * 0.07, b - u * dy + Math.sin(a) * u * 0.07, u * 0.06, bloom, lw * 0.6);
+      }
+      circle(g, cx + u * dx, b - u * dy, u * 0.045, '#FFD23F', lw * 0.6);
+    }
+  }
+  polygon(g, [cx - u * 0.36, b - u * 0.52, cx + u * 0.36, b - u * 0.52, cx + u * 0.26, b, cx - u * 0.26, b], pot, INK, lw);
+  box(g, cx - u * 0.4, b - u * 0.6, u * 0.8, u * 0.13, dk(pot, -0.15), lw, u * 0.03);
+}
+
+function beachBall(g, x, b, u, lw) {
+  const r = u * 0.42, cx = x + u * 0.5, cy = b - r;
+  const cols = ['#DD0200', '#FFFFFF', '#1F4BFF', '#FFFFFF', '#FFCC00', '#FFFFFF'];
+  cols.forEach((col, i) => {
+    g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, (i / 6) * Math.PI * 2 - 0.3, ((i + 1) / 6) * Math.PI * 2 - 0.3); g.closePath();
+    g.fillStyle = col; g.fill();
+  });
+  circle(g, cx, cy, r, null, lw);
+  circle(g, cx, cy, r * 0.16, '#FFFFFF', lw * 0.7);
+  g.fillStyle = 'rgba(255,255,255,.45)';
+  g.beginPath(); g.ellipse(cx - r * 0.4, cy - r * 0.45, r * 0.22, r * 0.12, -0.6, 0, Math.PI * 2); g.fill();
+}
+
+function bigMug(g, x, b, u, lw, col) {
+  g.strokeStyle = INK; g.lineWidth = u * 0.14;
+  g.beginPath(); g.arc(x + u * 0.86, b - u * 0.42, u * 0.18, -Math.PI / 2, Math.PI / 2); g.stroke();
+  g.strokeStyle = col; g.lineWidth = u * 0.08; g.stroke();
+  box(g, x + u * 0.15, b - u * 0.75, u * 0.7, u * 0.75, col, lw, u * 0.08);
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x + u * 0.25, b - u * 0.68, u * 0.08, u * 0.55);
+  star(g, x + u * 0.5, b - u * 0.38, u * 0.14, '#FFF3E3', lw * 0.7);
+}
+
+const gap = (w) => [w, () => {}];
 
 // ---------------------------------------------------------------------------
 // Rooms. `wall` items hang on the wall (base = where the wall meets the floor);
@@ -156,6 +204,17 @@ const ROOMS = {
       }],
       [0.5, () => {}],
     ],
+    front: [
+      gap(1.4),
+      [1.2, (g, x, b, u, c, lw) => {
+        const s = u * 0.48;
+        box(g, x, b - s, s, s, c.furnC, lw, u * 0.04); letter(g, 'D', x + s / 2, b - s / 2, s * 0.6, '#FFF3E3', lw);
+        box(g, x + s * 0.5, b - s * 2, s, s, c.furnA, lw, u * 0.04); letter(g, 'E', x + s, b - s * 1.5, s * 0.6, '#FFF3E3', lw);
+      }],
+      gap(3.2),
+      [1.0, (g, x, b, u, c, lw) => beachBall(g, x, b, u, lw)],
+      gap(2.6),
+    ],
   },
 
   living: {
@@ -252,6 +311,13 @@ const ROOMS = {
       }],
       [0.4, () => {}],
     ],
+    front: [
+      gap(1.0),
+      [1.0, (g, x, b, u, c, lw) => flowerPot(g, x, b, u, lw, '#D2693C', null)],
+      gap(3.4),
+      [1.0, (g, x, b, u, c, lw) => flowerPot(g, x, b, u, lw, c.furnC, '#E85D75')],
+      gap(2.4),
+    ],
   },
 
   kitchen: {
@@ -338,6 +404,13 @@ const ROOMS = {
       }],
       [0.4, () => {}],
     ],
+    front: [
+      gap(1.6),
+      [1.1, (g, x, b, u, c, lw) => bigMug(g, x, b, u, lw, c.furnB)],
+      gap(3.0),
+      [1.0, (g, x, b, u, c, lw) => flowerPot(g, x, b, u, lw, '#2E8B7A', null)],
+      gap(2.2),
+    ],
   },
 
   garden: {
@@ -402,6 +475,15 @@ const ROOMS = {
       }],
       [0.6, () => {}],
     ],
+    front: [
+      gap(0.8),
+      [1.0, (g, x, b, u, c, lw) => flowerPot(g, x, b, u, lw, '#B5532E', c.furnA)],
+      gap(2.6),
+      [1.0, (g, x, b, u, c, lw) => flowerPot(g, x, b, u, lw, '#B5532E', c.furnB)],
+      gap(1.2),
+      [1.0, (g, x, b, u, c, lw) => flowerPot(g, x, b, u, lw, '#8A5A3C', '#FFFFFF')],
+      gap(2.8),
+    ],
     fence(g, w, b, u, lw) {
       const col = '#3A2A1E';
       g.fillStyle = col;
@@ -433,52 +515,78 @@ function stripWidth(items, u) {
   return Math.ceil(items.reduce((s, [w]) => s + w, 0) * u);
 }
 
+/** Front objects are bigger: they stand closer to the camera. */
+const FRONT_SCALE = 1.35;
+
+function layer(w, h) {
+  const canvas = makeCanvas(w, h);
+  const g = canvas.getContext('2d');
+  g.lineJoin = 'round';
+  return { canvas, g };
+}
+
+function tintLayer(g, w, h, color, alpha) {
+  if (alpha <= 0) return;
+  g.globalCompositeOperation = 'source-atop';
+  g.fillStyle = rgb(hexToRgb(color), alpha);
+  g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = 'source-over';
+}
+
 /**
- * Build one room as a single strip as tall as the wall (its bottom is the floor line):
- * the wall color, its decoration and the furniture in front, all baked into one bitmap
- * so each frame needs one image copy. Indoors the strip is opaque; the garden leaves
- * the sky transparent for the live stars and moon.
+ * Build one room as three strips as tall as the wall (their bottom is the floor line).
+ * Indoors the wall strip is opaque; the garden leaves the sky transparent for the live
+ * stars and moon. The other two layers are transparent between the objects.
  */
 export function buildScene(ambIndex, W, horizon) {
   const c = RAW[ambIndex];
   const room = ROOMS[c.name];
   const u = sceneUnit(W, horizon);
   const lw = Math.max(1, u * 0.022);
-
-  const w = Math.max(stripWidth(room.furniture, u), stripWidth(room.wall, u), Math.ceil(W * 0.6));
   const h = Math.max(1, Math.ceil(horizon));
-  const strip = makeCanvas(w, h);
-  const g = strip.getContext('2d');
-  g.lineJoin = 'round';
+  const tintA = c.tintAlpha * (room.night ? 0.35 : 1);
+
+  // Wall.
+  const wallW = Math.max(stripWidth(room.wall, u), Math.ceil(W * 0.6));
+  const wall = layer(wallW, h);
   if (!room.night) {
-    const grad = g.createLinearGradient(0, 0, 0, h);
+    const grad = wall.g.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, c.skyTop);
     grad.addColorStop(1, c.skyBottom);
-    g.fillStyle = grad;
-    g.fillRect(0, 0, w, h);
+    wall.g.fillStyle = grad;
+    wall.g.fillRect(0, 0, wallW, h);
   }
-  room.wallpaper(g, w, h, u, c, h);
-  // Wall decoration, repeated until it fills the strip.
-  const wallW = stripWidth(room.wall, u);
-  for (let x0 = 0; x0 < w; x0 += wallW) {
+  room.wallpaper(wall.g, wallW, h, u, c, h);
+  const decoW = stripWidth(room.wall, u);
+  for (let x0 = 0; x0 < wallW; x0 += decoW) {
     let x = x0;
-    for (const [iw, draw] of room.wall) { if (x < w) draw(g, x, h, u, c, lw); x += iw * u; }
+    for (const [iw, draw] of room.wall) { if (x < wallW) draw(wall.g, x, h, u, c, lw); x += iw * u; }
   }
-  // Baseboard where the wall meets the floor.
   if (!room.night) {
-    g.fillStyle = c.trim;
-    g.fillRect(0, h - u * 0.09, w, u * 0.09);
-    g.fillStyle = INK;
-    g.fillRect(0, h - u * 0.09, w, Math.max(1, lw * 0.6));
+    // Baseboard where the wall meets the floor.
+    wall.g.fillStyle = c.trim;
+    wall.g.fillRect(0, h - u * 0.09, wallW, u * 0.09);
+    wall.g.fillStyle = INK;
+    wall.g.fillRect(0, h - u * 0.09, wallW, Math.max(1, lw * 0.6));
   }
-  if (room.fence) room.fence(g, w, h, u, lw);
+  tintLayer(wall.g, wallW, h, c.tint, tintA);
+
+  // Furniture.
+  const midW = Math.max(stripWidth(room.furniture, u), Math.ceil(W * 0.6));
+  const mid = layer(midW, h);
+  if (room.fence) room.fence(mid.g, midW, h, u, lw);
   let x = 0;
-  for (const [iw, draw] of room.furniture) { draw(g, x, h, u, c, lw); x += iw * u; }
-  if (room.grass) room.grass(g, w, h, u);
-  if (c.tintAlpha > 0) {
-    g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = rgb(hexToRgb(c.tint), c.tintAlpha * (room.night ? 0.35 : 1));
-    g.fillRect(0, 0, w, h);
-  }
-  return { strip, u, opaque: !room.night };
+  for (const [iw, draw] of room.furniture) { draw(mid.g, x, h, u, c, lw); x += iw * u; }
+  if (room.grass) room.grass(mid.g, midW, h, u);
+  tintLayer(mid.g, midW, h, c.tint, tintA);
+
+  // Giant things in front: bigger, a touch darker (in the shade of the track).
+  const fu = u * FRONT_SCALE, flw = lw * FRONT_SCALE;
+  const frontW = Math.max(stripWidth(room.front, fu), Math.ceil(W * 0.8));
+  const front = layer(frontW, h);
+  x = 0;
+  for (const [iw, draw] of room.front) { draw(front.g, x, h, fu, c, flw); x += iw * fu; }
+  tintLayer(front.g, frontW, h, room.night ? c.tint : '#000000', room.night ? 0.3 : 0.08);
+
+  return { wall: wall.canvas, mid: mid.canvas, front: front.canvas, u, opaque: !room.night };
 }

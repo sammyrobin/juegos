@@ -1,0 +1,17 @@
+# TURBO PISTA ranking API: only scores.php answers from the web.
+# inc/ (code) and data/ (the SQLite file and the salt) carry their own "deny all".
+Options -Indexes
+
+<FilesMatch "\.(sqlite|sqlite-journal|key|log|txt|md)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header set Cache-Control "no-store"
+</IfModule>

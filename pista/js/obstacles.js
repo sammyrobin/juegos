@@ -24,6 +24,8 @@ export class Obstacles {
   constructor() {
     this.rivals = [];
     this.bySegment = new Map();
+    // Faster cars get more room between obstacle rows (same reaction time).
+    this.spacing = 1;
     this.populate = this.populate.bind(this);
   }
 
@@ -119,7 +121,7 @@ export class Obstacles {
           }
         }
         if (chance(0.45)) coins(i - 6, 3, free, 3);
-        i += d.rowGap + randInt(0, 8);
+        i += Math.round(d.rowGap * this.spacing) + randInt(0, 8);
       }
     }
   }

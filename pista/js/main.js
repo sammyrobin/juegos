@@ -5,15 +5,18 @@
 //     └──────────── Cambiar auto ◀── over ◀──────┘ (3 lives lost)
 //
 // In the menu the same world runs behind the panel with an autopilot (attract mode).
+// The global ranking (ranking.js) is optional: each race asks the server for a token,
+// and a score that makes the top 20 can be sent with a nickname at the game over.
 
 import { Sound } from './audio.js';
-import { PLAYER_CARS, renderCarSide } from './cars.js';
+import { PLAYER_CARS, renderCarSide, unlockedCars } from './cars.js';
 import { Loop } from './engine.js';
 import { t } from './i18n.js';
 import { Input } from './input.js';
 import { Obstacles } from './obstacles.js';
+import { Ranking, validName } from './ranking.js';
 import { AMBIENTS, ambientIndexForLevel, blendAmbients } from './palette.js';
-import { NITRO_TIME, Player } from './player.js';
+import { NITRO_TIME, Player, handlingOf, topSpeed } from './player.js';
 import { DRAW_DISTANCE, PLAYER_Z, Particles, Renderer } from './render.js';
 import { SpriteBank } from './sprites.js';
 import { UI } from './ui.js';
@@ -23,18 +26,18 @@ import { clamp, easeInOut, formatInt } from './util.js';
 
 const LOOP_TIME = 2.6;          // seconds of loop cinematic
 const COUNTDOWN_STEP = 0.8;
-const KMH = 180 / 10000;        // 10 000 world units per second = 180 km/h
 const params = new URLSearchParams(location.search);
 const DEBUG_FPS = params.has('fps');
 const AUTOPILOT = params.has('autopilot');   // dev flag: the AI also drives during a run
 const START_LEVEL = Math.max(1, Number(params.get('level')) || 1); // dev flag: start at level N
+const AUTOPILOT_LOCKED = AUTOPILOT && !params.has('unlock');       // dev runs only unlock with ?unlock
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const canvas = document.getElementById('screen');
 const saved = load();
 
 const ui = new UI();
-const sound = new Sound(saved.muted);
+const sound = new Sound({ musicVol: saved.musicVol, sfxVol: saved.sfxVol, musicMuted: saved.musicMuted, sfxMuted: saved.sfxMuted });
 const sprites = new SpriteBank();
 const renderer = new Renderer(canvas, sprites, reducedMotion.matches);
 const obstacles = new Obstacles();
@@ -62,7 +65,10 @@ const S = {
   launch: null,           // start booster: { pull } while arming, { fired } after the release
   zoom: 0,                // nitro "toy zoom" punch, 1 → 0
   lastPiece: 0, clackTimer: 0,
+  fxTimer: 0,
   best: saved.best,
+  unlocked: unlockedCars(saved.bestDistance),   // car indices available in the menu
+  newCars: [],            // cars unlocked during this run
 };
 
 // ---------------------------------------------------------------------------
@@ -72,6 +78,8 @@ const S = {
 function newRun(menu) {
   const level = menu ? 1 : START_LEVEL;
   const startIndex = (level - 1) * LEVEL_LEN;
+  // Faster cars get more room between obstacle rows, so the reaction time stays fair.
+  obstacles.spacing = menu ? 1 : Math.max(1, handlingOf(ui.selectedCar()).top);
   track.reset(menu, startIndex);
   obstacles.reset();
   particles.clear();
@@ -83,6 +91,7 @@ function newRun(menu) {
     lastPiece: Math.floor((startIndex * SEG + PLAYER_Z) / (SEG * PIECE)), clackTimer: 0,
   });
   S.startIndex = startIndex;
+  S.newCars = [];
   track.ensure(startIndex + DRAW_DISTANCE + 20);
   ui.resetHud();
 }
@@ -95,6 +104,12 @@ function setMode(mode) {
 }
 
 function goMenu() {
+  const unlocked = unlockedCars(load().bestDistance);
+  if (unlocked.length !== S.unlocked.length) {
+    S.unlocked = unlocked;
+    ui.buildCars(unlocked);
+    ui.setSelectedCar(player.car);
+  }
   newRun(true);
   setMode('menu');
   ui.show('start');
@@ -102,6 +117,7 @@ function goMenu() {
   ui.countdown(null);
   sound.setScrape(false);
   sound.stopEngine();
+  sound.stopMusic();
 }
 
 function startRace() {
@@ -116,6 +132,10 @@ function startRace() {
   S.launch = { pull: 0 };
   document.activeElement?.blur?.();
   sound.startEngine();
+  sound.startMusic();
+  // The server times the race from here (dev autopilot runs are never ranked).
+  if (!AUTOPILOT) Ranking.startRun();
+  else Ranking.token = null;
 }
 
 function pause() {
@@ -140,16 +160,99 @@ function gameOver() {
   const score = scoreNow();
   const record = score > S.best;
   if (record) S.best = score;
-  save({ best: S.best, bestDistance: Math.max(saved.bestDistance || 0, Math.floor(S.distance)) });
+  save({ best: S.best, bestDistance: Math.max(load().bestDistance, Math.floor(S.distance)) });
   setMode('over');
   sound.setScrape(false);
   sound.stopEngine();
+  sound.stopMusic();
   sound.gameOver();
-  ui.gameOver({ score, distance: S.distance, coins: S.coins, level: S.level, best: S.best, record });
+  ui.gameOver({ score, distance: S.distance, coins: S.coins, level: S.level, best: S.best, record, car: player.car, unlocked: S.newCars.map((i) => PLAYER_CARS[i].num) });
   S.lastScore = score;
+  S.lastDistance = S.distance;
+  if (record && score > 0) confetti();
+  rankingFlow(score);
+}
+
+// ---------------------------------------------------------------------------
+// Global ranking (never blocks the game: any failure just hides it)
+// ---------------------------------------------------------------------------
+
+/** After the race: if the score makes the top 20, ask for a nickname. */
+async function rankingFlow(score) {
+  ui.hideRankForm();
+  if (!Ranking.token || score <= 0) return;
+  const list = await Ranking.fetchTop();
+  if (S.mode !== 'over' || !list || !Ranking.qualifies(score, list)) return;
+  ui.showRankForm(load().nickname, !ui.touchMode);
+}
+
+const RANK_ERRORS = {
+  name: () => t.rank.nameRule,
+  name_offensive: () => t.rank.offensive,
+  wait: (r) => t.rank.wait(r.retry || 30),
+  implausible: () => t.rank.rejected,
+  bad_request: () => t.rank.rejected,
+  token: () => t.rank.expired,
+  not_top: () => t.rank.notTop,
+  unavailable: () => t.rank.offlineSend,
+};
+
+async function sendScore(e) {
+  e.preventDefault();
+  const name = document.getElementById('nick').value.trim();
+  if (!validName(name)) {
+    ui.rankMessage(t.rank.nameRule, 'error');
+    document.getElementById('nick').focus();
+    return;
+  }
+  ui.rankBusy(true);
+  const r = await Ranking.submit({ name, score: S.lastScore, distance: Math.floor(S.lastDistance), car: player.car });
+  ui.rankBusy(false);
+  if (r?.ok) {
+    save({ nickname: name });
+    S.lastRankEntry = { name, score: S.lastScore };
+    ui.rankDone(t.rank.placed(r.rank));
+    sound.coin();
+    return;
+  }
+  ui.rankMessage(r ? (RANK_ERRORS[r.error] || RANK_ERRORS.implausible)(r) : t.rank.offlineSend, 'error');
+  // These cannot be fixed by changing the nickname.
+  if (r && ['token', 'not_top', 'implausible', 'bad_request'].includes(r.error)) ui.rankClosed();
+}
+
+/** The ranking screen, opened from the start menu or the game over screen. */
+async function openRanking(from) {
+  S.rankingFrom = from;
+  ui.show('ranking');
+  const you = S.lastRankEntry || null;
+  ui.renderRanking(Ranking.top ?? 'loading', you);
+  const list = await Ranking.fetchTop();
+  if (!ui.screens.ranking.hidden) ui.renderRanking(list ?? 'offline', you);
+}
+
+/** Paper confetti raining over the game over screen after a new record. */
+function confetti() {
+  const n = reducedMotion.matches ? 0 : 70;
+  const colors = ['#DD0200', '#FFCC00', '#1F4BFF', '#2BA84A', '#FFFFFF', '#FF7A00'];
+  for (let i = 0; i < n; i++) {
+    particles.spawn({
+      shape: 'rect', x: Math.random() * renderer.W, y: -20 - Math.random() * renderer.H * 0.4,
+      vx: (Math.random() - 0.5) * 160, vy: 120 + Math.random() * 200, g: 260, vr: (Math.random() - 0.5) * 10,
+      life: 2.6 + Math.random(), size: 14 + Math.random() * 8, color: colors[i % colors.length],
+    });
+  }
 }
 
 const scoreNow = () => Math.floor(S.distance) + S.bonus;
+
+/**
+ * Speedometer: at full speed each car shows its own top speed (220, 350 km/h…), a bit
+ * more on later levels (the track gets faster), and up to 40 % more with the nitro.
+ */
+function kmhNow() {
+  const top = topSpeed(difficulty(S.level).maxSpeed, player.feel);
+  return (PLAYER_CARS[player.car].kmh * player.speed / top) * (1 + 0.05 * (S.level - 1));
+}
 
 // ---------------------------------------------------------------------------
 // Update
@@ -199,6 +302,7 @@ function update(dt) {
   if (S.fallPending && player.fall <= 0) respawnAfterFall();
 
   S.distance = S.position / SEG - S.startIndex;
+  if (racing && !AUTOPILOT_LOCKED) checkUnlocks();
   const lvl = levelAt(Math.floor(curZ / SEG));
   if (lvl > S.level) levelUp(lvl, menu);
 
@@ -210,6 +314,7 @@ function update(dt) {
     if (racing && !player.airborne && S.clackTimer <= 0) { sound.clack(); S.clackTimer = 0.07; }
   }
 
+  if (racing && S.overTimer <= 0) carEffects(dt);
   if (racing) {
     if (player.scraping && !player.airborne) sparks();
     sound.setScrape(player.scraping);
@@ -226,6 +331,12 @@ function update(dt) {
 
 function updateCountdown(dt) {
   S.countdown += dt;
+  S.fxTimer -= dt;
+  if (S.fxTimer <= 0 && renderer.carBox) {
+    S.fxTimer = 0.18;
+    const c = renderer.carBox;
+    smoke(c.x + (Math.random() < 0.5 ? -1 : 1) * c.w * 0.14, c.y - c.h * 0.1, 1, '#D8D3CA', 6, 0.3);
+  }
   const step = S.countdown < COUNTDOWN_STEP ? 3 : S.countdown < COUNTDOWN_STEP * 2 ? 2 : S.countdown < COUNTDOWN_STEP * 3 ? 1 : 0;
   // The car is pulled back against the booster spring, one click per light.
   if (S.launch && S.launch.pull !== undefined) S.launch.pull = Math.min(1, S.countdown / (COUNTDOWN_STEP * 2.6));
@@ -248,11 +359,12 @@ function updateCountdown(dt) {
 function launch() {
   const d = difficulty(S.level);
   S.launch = { fired: 0 };
-  player.speed = d.maxSpeed * 0.8 * player.feel.top;
+  player.speed = topSpeed(d.maxSpeed, player.feel) * 0.8;
   sound.spring();
   S.zoom = 0.7;
   const c = carScreen();
   particles.burst(c.x, c.y, 10, { color: 'rgba(255,243,227,.85)', size: 10, speed: 380, life: 0.5, g: -150 });
+  smoke(c.x, c.y, 6, '#E8E2D6', 14);
 }
 
 function updateLoop(dt) {
@@ -320,6 +432,7 @@ function handle(e, menu) {
       player.skid = 1;
       player.speed *= 0.75;
       sound.skid();
+      smoke(c.x, c.y, 5, '#3A3640', 12);
       break;
     case 'cone':
       if (menu) return;
@@ -370,6 +483,7 @@ function crash(kind) {
     const spec = PLAYER_CARS[player.car];
     particles.burst(c.x, c.y - c.h * 0.5, 16, { color: spec.body, shape: 'rect', size: 14, speed: 700, lift: 500, life: 0.9, g: 1800 });
     particles.burst(c.x, c.y - c.h * 0.5, 10, { color: '#141414', shape: 'rect', size: 9, speed: 600, lift: 300, life: 0.8, g: 1800 });
+    smoke(c.x, c.y - c.h * 0.4, 6, '#5A5560', 16);
   }
   if (player.lives <= 0) S.overTimer = 1.3;
   else ui.announce(t.lifeLost(player.lives));
@@ -384,6 +498,21 @@ function respawnAfterFall() {
   player.vx = 0;
   player.alt = 0;
   player.invul = 2.2;
+}
+
+/** A locked car whose goal distance was just reached: banner, fanfare and saved progress. */
+function checkUnlocks() {
+  for (let i = 0; i < PLAYER_CARS.length; i++) {
+    const car = PLAYER_CARS[i];
+    if (S.unlocked.includes(i) || S.newCars.includes(i) || S.distance < car.unlock) continue;
+    S.newCars.push(i);
+    save({ bestDistance: Math.max(load().bestDistance, Math.floor(S.distance)) });
+    sound.fanfare();
+    ui.unlockBanner(car);
+    const c = carScreen();
+    particles.burst(c.x, c.y - c.h, 24, { color: '#FFCC00', size: 7, speed: 600, life: 0.9, g: 700 });
+    particles.burst(c.x, c.y - c.h, 14, { color: car.body, shape: 'rect', size: 12, speed: 520, life: 1, g: 900 });
+  }
 }
 
 function levelUp(level, menu) {
@@ -441,6 +570,40 @@ function sparks() {
 function dust() {
   const c = carScreen();
   particles.burst(c.x, c.y, 8, { color: 'rgba(255,243,227,.8)', size: 9, speed: 300, life: 0.45, g: -200 });
+  smoke(c.x, c.y, 4, '#E8E2D6', 12);
+}
+
+/** Soft smoke puffs that grow and fade (tires, crashes, the oil). */
+function smoke(x, y, n, color = '#CFCAC0', size = 10, spread = 1) {
+  if (reducedMotion.matches) n = Math.min(n, 1);
+  for (let i = 0; i < n; i++) {
+    particles.spawn({
+      shape: 'puff', color, x: x + (Math.random() - 0.5) * size * 4 * spread, y: y - Math.random() * size,
+      vx: (Math.random() - 0.5) * 160 * spread, vy: -60 - Math.random() * 120, g: -40,
+      life: 0.6 + Math.random() * 0.4, size: size * (0.7 + Math.random() * 0.6), alpha: 0.45, grow: 2.4,
+    });
+  }
+}
+
+/** Every frame of the race: exhaust puffs, tire smoke while sliding and the turbo trail. */
+function carEffects(dt) {
+  const c = carScreen();
+  S.fxTimer -= dt;
+  if (S.fxTimer > 0) return;
+  S.fxTimer = reducedMotion.matches ? 0.2 : 0.05;
+  const spec = PLAYER_CARS[player.car];
+  if (player.boosting) {
+    // Turbo trail: blue and yellow embers streaming back from the exhausts.
+    for (const side of [-1, 1]) {
+      particles.spawn({
+        x: c.x + side * c.w * 0.14, y: c.y - c.h * 0.12, vx: side * 40 * Math.random(), vy: 380 + Math.random() * 200,
+        life: 0.35, size: 7, color: Math.random() < 0.5 ? '#6C8CFF' : '#FFCC00', g: 0,
+      });
+    }
+  }
+  if (player.airborne || player.fall > 0) return;
+  if (player.skid > 0 || player.scraping) smoke(c.x + (player.scraping ? Math.sign(player.x) * c.w * 0.4 : 0), c.y, 1, '#D8D3CA', 11);
+  else if (Math.random() < 0.15) smoke(c.x + (Math.random() < 0.5 ? -1 : 1) * c.w * 0.14, c.y - c.h * 0.1, 1, spec.style === 'hotrod' ? '#9A9AA0' : '#C9C4BA', 5, 0.3);
 }
 
 // ---------------------------------------------------------------------------
@@ -491,13 +654,13 @@ function render(dt) {
 
   // Engine pitch follows the speed.
   if (S.mode === 'play' || S.mode === 'countdown') {
-    const ratio = S.mode === 'countdown' ? 0.12 + 0.08 * Math.sin(S.time * 9) ** 2 : player.speed / 14500;
+    const ratio = S.mode === 'countdown' ? 0.06 + 0.04 * Math.sin(S.time * 9) ** 2 : player.speed / topSpeed(difficulty(S.level).maxSpeed, player.feel);
     sound.updateEngine(ratio, player.boosting, S.loop ? 1.3 : 1);
   }
 
   if (S.mode === 'play' || S.mode === 'countdown' || S.mode === 'paused') {
     ui.updateHud({
-      score: scoreNow(), distance: S.distance, coins: S.coins, kmh: player.speed * KMH,
+      score: scoreNow(), distance: S.distance, coins: S.coins, kmh: kmhNow(), kmhMax: PLAYER_CARS[player.car].kmh * 1.75, maxLives: player.maxLives,
       best: Math.max(S.best, scoreNow()), level: S.level, lives: player.lives,
       nitro: player.boosting ? player.nitro / NITRO_TIME : 0,
     });
@@ -533,23 +696,56 @@ on('btn-again', startRace);
 on('btn-over-menu', () => { sound.click(); goMenu(); });
 on('btn-pause', () => { if (S.mode === 'paused') resume(); else pause(); });
 on('btn-share', share);
+on('btn-ranking', () => { sound.click(); openRanking('start'); });
+on('btn-over-ranking', () => { sound.click(); openRanking('over'); });
+on('btn-ranking-back', () => { sound.click(); ui.show(S.rankingFrom || 'start'); });
+document.getElementById('rank-form').addEventListener('submit', sendScore);
+// Sound panel: "Música/Motor" and "Efectos", each with its own volume and mute.
 on('btn-sound', () => {
-  const muted = !sound.muted;
   sound.unlock();
-  sound.setMuted(muted);
-  ui.setMuted(muted);
-  save({ muted });
-  if (!muted) sound.click();
+  if (!ui.soundPanelOpen && (S.mode === 'play' || S.mode === 'countdown')) pause();
+  ui.toggleSoundPanel();
 });
-
-document.querySelectorAll('input[name="car"]').forEach((radio) => {
-  radio.addEventListener('change', () => {
-    player.setCar(ui.selectedCar());
-    save({ car: player.car });
-    // The blister pops open.
-    sound.unlock();
-    sound.crinkle();
+function setSound(patch) {
+  sound.setPrefs(patch);
+  save(patch);
+  ui.setSoundPrefs(sound.prefs);
+}
+for (const ch of ['music', 'sfx']) {
+  const vol = document.getElementById(`vol-${ch}`);
+  vol.addEventListener('input', () => setSound({ [`${ch}Vol`]: Number(vol.value) / 100, [`${ch}Muted`]: false }));
+  // A short beep after moving the effects slider lets the player hear the new volume.
+  if (ch === 'sfx') vol.addEventListener('change', () => sound.coin());
+  on(`mute-${ch}`, () => {
+    setSound({ [`${ch}Muted`]: !sound.prefs[`${ch}Muted`] });
+    if (ch === 'sfx' && !sound.prefs.sfxMuted) sound.click();
   });
+}
+// Close the panel with Escape (before it reaches the pause key) or a click outside it.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && ui.soundPanelOpen) {
+    e.stopPropagation();
+    ui.toggleSoundPanel(false);
+    document.getElementById('btn-sound').focus();
+  }
+}, true);
+document.addEventListener('pointerdown', (e) => {
+  if (ui.soundPanelOpen && !e.target.closest('.sound-box')) ui.toggleSoundPanel(false);
+});
+// Audio starts only after the first touch, click or key (mobile browsers block it before).
+const firstGesture = () => {
+  sound.unlock();
+  for (const type of ['pointerdown', 'keydown']) window.removeEventListener(type, firstGesture, true);
+};
+for (const type of ['pointerdown', 'keydown']) window.addEventListener(type, firstGesture, true);
+
+document.getElementById('cars').addEventListener('change', (e) => {
+  if (e.target.name !== 'car') return;
+  player.setCar(ui.selectedCar());
+  save({ car: player.car });
+  // The blister pops open.
+  sound.unlock();
+  sound.crinkle();
 });
 
 // Auto-pause when the tab is hidden or the window loses focus; stop drawing while hidden.
@@ -591,8 +787,9 @@ async function share() {
 }
 
 // Boot: menu with the attract mode running behind it.
-ui.setSelectedCar(saved.car);
-ui.setMuted(saved.muted);
+ui.buildCars(S.unlocked);
+ui.setSelectedCar(S.unlocked.includes(saved.car) ? saved.car : 0);
+ui.setSoundPrefs(sound.prefs);
 ui.setBest(S.best);
 renderer.resize();
 goMenu();

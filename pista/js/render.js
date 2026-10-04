@@ -77,6 +77,13 @@ export class Particles {
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035);
         ctx.stroke();
+      } else if (p.shape === 'puff') {
+        // Smoke: a soft disc that grows while it fades.
+        ctx.globalAlpha = k * (p.alpha ?? 0.5);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.5, p.size * scale * (1 + (p.age / p.life) * (p.grow ?? 2.5))), 0, Math.PI * 2);
+        ctx.fill();
       } else if (p.shape === 'rect') {
         ctx.save();
         ctx.translate(p.x, p.y);
@@ -326,13 +333,18 @@ export class Renderer {
     if (pal.night > 0.7) this.fireflies(view.time, hz, pal.night);
   }
 
-  /** A room strip, scrolled with the curves and tiled across the screen. */
+  /**
+   * The room's three parallax strips (wall, furniture, giant things in front), each
+   * scrolled with the curves at its own speed and tiled across the screen.
+   */
   roomLayers(amb, alpha, base, offset = this.hillOffset * 1.2, scaleY = 1) {
     const { ctx, W } = this;
-    const img = this.scene(amb).strip;
-    const w = img.width * scaleY, h = img.height * scaleY;
+    const scene = this.scene(amb);
     ctx.globalAlpha = alpha;
-    for (let x = -((((offset * W * 1.6) % w) + w) % w); x < W; x += w) ctx.drawImage(img, x, base - h, w, h);
+    for (const [img, speed] of [[scene.wall, 0.55], [scene.mid, 1], [scene.front, 1.8]]) {
+      const w = img.width * scaleY, h = img.height * scaleY;
+      for (let x = -((((offset * speed * W * 1.6) % w) + w) % w); x < W; x += w) ctx.drawImage(img, x, base - h, w, h);
+    }
     ctx.globalAlpha = 1;
   }
 
@@ -421,12 +433,21 @@ export class Renderer {
         }
         if (near) grooves.push(Q(-1, -1 + 0.03), Q(1 - 0.03, 1));
         this.fillQuads(pal.css.groove, ...grooves);
+        // Yellow lane marks, painted every other band like dashes.
+        if (band && w1 > W * 0.015) {
+          const m = 0.03, marks = [];
+          for (let lane = 1; lane < LANES; lane++) {
+            const f = -1 + (2 * lane) / LANES;
+            marks.push(Q(f - m, f + m, 0.1, 0.9));
+          }
+          this.fillQuads(pal.css.mark, ...marks);
+        }
       }
 
       if (piece.joint && near) {
         // Joint between two plastic pieces: a seam across and the connector tab.
         this.fillQuads(pal.css.seam, Q(-1, 1, 0, 0.1), Q(-0.07, 0.07, 0, 0.45));
-        this.fillQuads(pal.css.wallTop, Q(-0.05, 0.05, 0.08, 0.38));
+        this.fillQuads(pal.css.tab, Q(-0.05, 0.05, 0.08, 0.38));
       }
 
       if (piece.hole) {
@@ -454,7 +475,7 @@ export class Renderer {
         [rx1, ry1 - h1, rx2, ry2 - h2, rx2 + r2, ry2 - h2, rx1 + r1, ry1 - h1]);
       if (piece.joint && near) {
         const s = Math.max(1, w1 * 0.012);
-        this.fillQuads(pal.css.seam,
+        this.fillQuads(pal.css.wallOuter,
           [lx1, ly1, lx1 + s, ly1, lx1 + s, ly1 - h1, lx1, ly1 - h1],
           [rx1 - s, ry1, rx1, ry1, rx1, ry1 - h1, rx1 - s, ry1 - h1]);
       }
@@ -640,12 +661,17 @@ export class Renderer {
     return img;
   }
 
+  /** A soft shadow: a wide light ellipse and a darker core (smaller when airborne). */
   shadow(x, y, halfW, alt) {
     const { ctx } = this;
     const k = clamp(1 - alt / 1600, 0.35, 1);
-    ctx.fillStyle = `rgba(0,0,0,${0.32 * k})`;
+    ctx.fillStyle = `rgba(0,0,0,${(0.2 * k).toFixed(3)})`;
     ctx.beginPath();
-    ctx.ellipse(x, y, halfW * k, Math.max(1, halfW * 0.16 * k), 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y, halfW * k * 1.12, Math.max(1, halfW * 0.2 * k), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = `rgba(0,0,0,${(0.28 * k).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, halfW * k * 0.86, Math.max(1, halfW * 0.12 * k), 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -859,6 +885,15 @@ export class Renderer {
     ctx.rotate(rot);
     ctx.scale(scale, scale);
 
+    if (player.boosting && !this.reducedMotion) {
+      // Turbo trail: fading copies of the car stretched towards the camera.
+      for (let i = 3; i >= 1; i--) {
+        const k = i / 3;
+        ctx.globalAlpha = alpha * (0.32 - k * 0.08) * (0.6 + 0.4 * Math.min(1, player.nitro));
+        ctx.drawImage(img, -dw * (1 + k * 0.16) / 2, -dh * (1 - k * 0.42), dw * (1 + k * 0.16), dh * (1 + k * 0.1));
+      }
+      ctx.globalAlpha = alpha;
+    }
     if (player.boosting) {
       // Exhaust flames.
       const f = 0.7 + (this.reducedMotion ? 0.2 : Math.random() * 0.5);
@@ -878,6 +913,7 @@ export class Renderer {
       }
     }
     ctx.drawImage(img, -dw / 2, -dh, dw, dh);
+    if (img.tires && player.fall <= 0) this.spinTires(img, dw, dh, view.position);
     ctx.restore();
 
     if (view.pal.night > 0.5 && alpha > 0.3) {
@@ -885,6 +921,28 @@ export class Renderer {
       this.glow(x + dw * 0.3, y - altPx - dh * 0.42, dw * 0.35, 'rgba(255,40,40,.6)', view.pal.night);
     }
     this.carBox = { x, y: y - altPx, w: dw, h: dh };
+  }
+
+  /** Tread bars rolling over each tire, so the wheels spin with the speed. */
+  spinTires(img, dw, dh, position) {
+    const { ctx } = this;
+    const kx = dw / img.width, ky = dh / img.height;
+    const phase = this.reducedMotion ? 0 : (position * 0.0022) % 1;
+    ctx.fillStyle = '#1E1E22';
+    ctx.beginPath();
+    for (const [tx, ty, tw, th] of img.tires) ctx.rect(-dw / 2 + tx * kx, -dh + ty * ky, tw * kx, th * ky);
+    ctx.fill();
+    ctx.fillStyle = '#3C3C44';
+    ctx.beginPath();
+    for (const [tx, ty, tw, th] of img.tires) {
+      const x = -dw / 2 + tx * kx, y = -dh + ty * ky, w = tw * kx, h = th * ky;
+      const step = Math.max(3, h / 4.5), bar = step * 0.38;
+      for (let yy = y + h - ((phase * step) % step) - bar; yy > y - bar; yy -= step) {
+        const top = Math.max(y, yy), bottom = Math.min(y + h, yy + bar);
+        if (bottom > top) ctx.rect(x, top, w, bottom - top);
+      }
+    }
+    ctx.fill();
   }
 
   /**

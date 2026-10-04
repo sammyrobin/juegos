@@ -251,5 +251,6 @@ function tint(src, color, alpha) {
   g.globalCompositeOperation = 'source-atop';
   g.fillStyle = rgb(color, alpha);
   g.fillRect(0, 0, c.width, c.height);
+  c.tires = src.tires;
   return c;
 }

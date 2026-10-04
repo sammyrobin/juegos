@@ -5,7 +5,11 @@
 
 import { hexToRgb, lerp, mixRgb, rgb, shade } from './util.js';
 
-const ROAD = { roadA: '#FF8A1F', roadB: '#F7821A', groove: '#D9660A', seam: '#A84800', wallA: '#F07A12', wallB: '#E87010', wallTop: '#FFB45C' };
+// Orange plastic track with blue rails, yellow lane marks and a lighter connector tab.
+const ROAD = {
+  roadA: '#FF8A1F', roadB: '#F7821A', groove: '#D9660A', seam: '#A84800', tab: '#FFB45C', mark: '#FFD23F',
+  wallA: '#1F6FE0', wallB: '#1A63CC', wallTop: '#6FA8FF',
+};
 
 export const RAW = [
   {
@@ -43,7 +47,8 @@ export const RAW = [
     skyTop: '#050818', skyBottom: '#1B2350', sun: '#F4F1DE', sunY: 0.32, sunR: 0.05,
     trim: '#5A4030', furnA: '#E85D9E', furnB: '#FFD84A', furnC: '#3E7BD6', wood: '#6B4A2E',
     floorA: '#1E3D2C', floorB: '#1A3627', floorLine: '#12291F', rug: '#4A3A2C', rugEdge: '#33271D', rugW: 1.55,
-    ...ROAD, roadA: '#C9601A', roadB: '#C05A16', groove: '#9A4410', seam: '#6E2E06', wallA: '#BE5A12', wallB: '#B55410', wallTop: '#E08A3C',
+    ...ROAD, roadA: '#C9601A', roadB: '#C05A16', groove: '#9A4410', seam: '#6E2E06', tab: '#E08A3C', mark: '#D9B235',
+    wallA: '#1A4FA8', wallB: '#16469A', wallTop: '#4F7FD0',
     fog: '#1B2350', fogDensity: 4.6,
     tint: '#0A1030', tintAlpha: 0.5,
     night: 1, stars: 1,

@@ -1,4 +1,5 @@
-# JUEGOS — static rules for /juegos (plain HTML, CSS and JS: nothing runs on the server).
+# JUEGOS — rules for /juegos (plain HTML, CSS and JS). The only server code is the
+# TURBO PISTA ranking in pista/api/, which has its own .htaccess.
 
 DirectoryIndex index.html
 Options -Indexes -MultiViews

@@ -4,3 +4,7 @@ node_modules/
 Thumbs.db
 desktop.ini
 .vscode/
+
+# TURBO PISTA ranking: the SQLite file and the salt live only on the server
+pista/api/data/*
+!pista/api/data/.htaccess
