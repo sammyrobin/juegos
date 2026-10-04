@@ -11,16 +11,18 @@ const GLASS_HI = 'rgba(255,255,255,0.35)';
 const LIGHT = '#FF2A2A';
 const CHROME = '#C9CED6';
 
+// Four original designs, identified only by color, race number and stats (1…5).
+// Each one drives a little differently (see player.js).
 export const PLAYER_CARS = [
-  { id: 'brasa', style: 'wedge', body: '#DD0200', dark: '#A30100', accent: '#FFCC00' },
-  { id: 'marea', style: 'round', body: '#1F4BFF', dark: '#1535C2', accent: '#FFFFFF' },
-  { id: 'chispa', style: 'buggy', body: '#FFCC00', dark: '#D9A800', accent: '#DD0200' },
-  { id: 'eclipse', style: 'muscle', body: '#26262C', dark: '#141418', accent: '#FF3B3B', glow: '#3D7BFF' },
+  { num: '07', color: 'red', style: 'track', body: '#DD0200', dark: '#A30100', accent: '#FFFFFF', stats: { speed: 4, accel: 3, handling: 5 } },
+  { num: '21', color: 'blue', style: 'muscle', body: '#1F4BFF', dark: '#1535C2', accent: '#FFFFFF', stats: { speed: 5, accel: 4, handling: 3 } },
+  { num: '33', color: 'yellow', style: 'jdm', body: '#FFCC00', dark: '#D9A800', accent: '#141414', stats: { speed: 3, accel: 5, handling: 4 } },
+  { num: '88', color: 'purple', style: 'hotrod', body: '#7B3FE4', dark: '#5A2BB0', accent: '#FF7A00', flame: '#FFCC00', stats: { speed: 5, accel: 5, handling: 2 } },
 ];
 
 export const RIVAL_CARS = [
   { id: 'van', style: 'van', body: '#1E8A3C', dark: '#156B2D', accent: '#FFF3E3' },
-  { id: 'compact', style: 'compact', body: '#7B3FE4', dark: '#5C2BB3', accent: '#FFCC00' },
+  { id: 'compact', style: 'compact', body: '#FF5FA2', dark: '#D93F80', accent: '#FFF3E3' },
   { id: 'pickup', style: 'pickup', body: '#F2F2F2', dark: '#C9C9C9', accent: '#1F9E9E' },
 ];
 
@@ -85,66 +87,100 @@ function glass(ctx, pts, lw) {
   ctx.restore();
 }
 
+function tiresAt(ctx, lw, y, w, xs) {
+  for (const x of xs) {
+    roundRect(ctx, x, y, w, 64 - y, 5, TIRE, INK, lw);
+    ctx.fillStyle = '#34343A';
+    for (let i = y + 5; i < 62; i += 6) ctx.fillRect(x + 3, i, w - 6, 2);
+  }
+}
+
+/** White race-number roundel. */
+function raceNumber(ctx, num, x, y, r, lw) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = lw * 0.7; ctx.stroke();
+  ctx.fillStyle = INK;
+  ctx.font = '900 ' + r * 1.12 + 'px "Arial Black", Impact, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(num, x, y + r * 0.06);
+}
+
 const REAR = {
-  wedge(ctx, s, lw) {
-    tires(ctx, lw);
-    polygon(ctx, [6, 56, 94, 56, 96, 36, 84, 26, 16, 26, 4, 36], s.body, INK, lw);
-    polygon(ctx, [30, 26, 36, 14, 64, 14, 70, 26], s.dark, INK, lw);
-    glass(ctx, [34, 25, 39, 16, 61, 16, 66, 25], lw);
-    ctx.fillStyle = s.accent; ctx.fillRect(46, 27, 8, 29);
-    tailLights(ctx, lw, 'split');
-    ctx.fillStyle = INK; ctx.fillRect(8, 49, 84, 4);
-    plate(ctx, lw);
-    exhausts(ctx, lw);
-    // Rear wing on two posts.
-    ctx.fillStyle = INK; ctx.fillRect(28, 8, 4, 20); ctx.fillRect(68, 8, 4, 20);
-    roundRect(ctx, 6, 3, 88, 8, 3, s.dark, INK, lw);
-    roundRect(ctx, 4, 0, 6, 14, 2, s.accent, INK, lw * 0.8);
-    roundRect(ctx, 90, 0, 6, 14, 2, s.accent, INK, lw * 0.8);
+  // 07: modern track car. Very wide and low, light bar, diffuser and a tall wing.
+  track(ctx, s, lw) {
+    tiresAt(ctx, lw, 38, 20, [2, 78]);
+    polygon(ctx, [2, 57, 98, 57, 99, 42, 91, 31, 9, 31, 1, 42], s.body, INK, lw);
+    polygon(ctx, [6, 41, 17, 37, 17, 50, 6, 52], s.dark, INK, lw * 0.8);
+    polygon(ctx, [94, 41, 83, 37, 83, 50, 94, 52], s.dark, INK, lw * 0.8);
+    polygon(ctx, [35, 31, 40, 21, 60, 21, 65, 31], s.dark, INK, lw);
+    glass(ctx, [38, 30, 42, 23, 58, 23, 62, 30], lw);
+    roundRect(ctx, 12, 34, 76, 4, 2, LIGHT, INK, lw * 0.7);
+    roundRect(ctx, 20, 50, 60, 7, 2, INK);
+    ctx.fillStyle = s.dark; for (let x = 26; x < 76; x += 9) ctx.fillRect(x, 51, 3, 6);
+    raceNumber(ctx, s.num, 50, 44, 5.4, lw);
+    ctx.fillStyle = INK; ctx.fillRect(40, 12, 3, 20); ctx.fillRect(57, 12, 3, 20);
+    roundRect(ctx, 3, 7, 94, 7, 3, s.dark, INK, lw);
+    ctx.fillStyle = s.accent; ctx.fillRect(6, 9.5, 88, 2);
+    roundRect(ctx, 0, 3, 6, 15, 2, s.body, INK, lw * 0.8);
+    roundRect(ctx, 94, 3, 6, 15, 2, s.body, INK, lw * 0.8);
   },
-  round(ctx, s, lw) {
-    tires(ctx, lw);
-    ctx.beginPath();
-    ctx.moveTo(6, 56); ctx.lineTo(94, 56); ctx.lineTo(95, 40);
-    ctx.quadraticCurveTo(94, 24, 72, 24); ctx.lineTo(28, 24); ctx.quadraticCurveTo(6, 24, 5, 40); ctx.closePath();
-    ctx.fillStyle = s.body; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = lw; ctx.stroke();
-    // Bubble canopy.
-    ctx.beginPath(); ctx.moveTo(28, 25); ctx.quadraticCurveTo(30, 6, 50, 6); ctx.quadraticCurveTo(70, 6, 72, 25); ctx.closePath();
-    ctx.fillStyle = GLASS; ctx.fill(); ctx.stroke();
-    ctx.fillStyle = GLASS_HI; ctx.beginPath(); ctx.ellipse(42, 13, 5, 3, -0.5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = s.accent; ctx.fillRect(40, 25, 5, 31); ctx.fillRect(55, 25, 5, 31);
-    tailLights(ctx, lw, 'round');
-    plate(ctx, lw, 44);
-    exhausts(ctx, lw, [50], 58);
-  },
-  buggy(ctx, s, lw) {
-    tires(ctx, lw, true);
-    // Roll bar.
-    ctx.strokeStyle = INK; ctx.lineWidth = lw * 2.2; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(26, 32); ctx.lineTo(30, 10); ctx.lineTo(70, 10); ctx.lineTo(74, 32); ctx.stroke();
-    ctx.strokeStyle = CHROME; ctx.lineWidth = lw * 1.1; ctx.stroke();
-    polygon(ctx, [18, 54, 82, 54, 84, 34, 72, 28, 28, 28, 16, 34], s.body, INK, lw);
-    // Exposed engine with a chrome blower.
-    roundRect(ctx, 36, 16, 28, 14, 3, CHROME, INK, lw);
-    ctx.fillStyle = '#7C828C'; for (let x = 39; x < 62; x += 4) ctx.fillRect(x, 18, 2, 10);
-    roundRect(ctx, 42, 8, 16, 9, 2, s.accent, INK, lw);
-    tailLights(ctx, lw, 'split', 36);
-    plate(ctx, lw, 44);
-    ctx.strokeStyle = CHROME; ctx.lineWidth = lw * 1.4;
-    ctx.beginPath(); ctx.moveTo(30, 54); ctx.lineTo(30, 60); ctx.moveTo(70, 54); ctx.lineTo(70, 60); ctx.stroke();
-  },
+  // 21: classic American muscle car. Boxy, twin stripes, chrome bumper, fat tires.
   muscle(ctx, s, lw) {
-    tires(ctx, lw);
-    polygon(ctx, [5, 56, 95, 56, 96, 30, 90, 26, 10, 26, 4, 30], s.body, '#5A5A66', lw);
-    polygon(ctx, [22, 26, 28, 12, 72, 12, 78, 26], s.dark, '#5A5A66', lw);
-    glass(ctx, [26, 25, 31, 14, 69, 14, 74, 25], lw);
-    ctx.fillStyle = s.dark; for (let y = 16; y < 24; y += 3) ctx.fillRect(31, y, 38, 1.2);
-    ctx.fillStyle = s.accent; ctx.fillRect(40, 12, 6, 44); ctx.fillRect(54, 12, 6, 44);
-    tailLights(ctx, lw, 'bar', 32);
-    // Ducktail spoiler.
-    polygon(ctx, [8, 27, 92, 27, 94, 23, 6, 23], s.dark, '#5A5A66', lw * 0.8);
-    plate(ctx, lw, 43);
-    exhausts(ctx, lw, [18, 82], 57);
+    tiresAt(ctx, lw, 36, 21, [2, 77]);
+    polygon(ctx, [4, 56, 96, 56, 97, 30, 92, 24, 8, 24, 3, 30], s.body, INK, lw);
+    polygon(ctx, [22, 24, 27, 10, 73, 10, 78, 24], s.dark, INK, lw);
+    glass(ctx, [26, 23, 30, 12, 70, 12, 74, 23], lw);
+    ctx.fillStyle = s.accent; ctx.fillRect(40, 10, 6, 46); ctx.fillRect(54, 10, 6, 46);
+    polygon(ctx, [7, 25, 93, 25, 95, 21, 5, 21], s.dark, INK, lw * 0.8);
+    roundRect(ctx, 9, 29, 30, 6, 2, LIGHT, INK, lw * 0.8);
+    roundRect(ctx, 61, 29, 30, 6, 2, LIGHT, INK, lw * 0.8);
+    raceNumber(ctx, s.num, 50, 40, 6, lw);
+    roundRect(ctx, 1, 48, 98, 6, 3, CHROME, INK, lw * 0.8);
+    exhausts(ctx, lw, [15, 85], 58);
+  },
+  // 33: smooth 90s Japanese-style coupe. Rounded body, oval lights, a small lip wing.
+  jdm(ctx, s, lw) {
+    tiresAt(ctx, lw, 38, 17, [5, 78]);
+    ctx.beginPath();
+    ctx.moveTo(5, 56); ctx.lineTo(95, 56); ctx.lineTo(96, 40); ctx.quadraticCurveTo(95, 28, 80, 27);
+    ctx.lineTo(20, 27); ctx.quadraticCurveTo(5, 28, 4, 40); ctx.closePath();
+    ctx.fillStyle = s.body; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = lw; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(26, 28); ctx.quadraticCurveTo(30, 12, 50, 12); ctx.quadraticCurveTo(70, 12, 74, 28); ctx.closePath();
+    ctx.fillStyle = s.dark; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(30, 27); ctx.quadraticCurveTo(33, 15, 50, 15); ctx.quadraticCurveTo(67, 15, 70, 27); ctx.closePath();
+    ctx.fillStyle = GLASS; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = GLASS_HI; ctx.beginPath(); ctx.ellipse(40, 20, 5, 2.4, -0.4, 0, Math.PI * 2); ctx.fill();
+    roundRect(ctx, 33, 33, 34, 6, 3, s.dark, INK, lw * 0.7);
+    for (const x of [20, 80]) {
+      ctx.beginPath(); ctx.ellipse(x, 36, 9, 3.6, 0, 0, Math.PI * 2);
+      ctx.fillStyle = LIGHT; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = lw * 0.8; ctx.stroke();
+    }
+    ctx.fillStyle = s.accent; ctx.fillRect(6, 44, 22, 2); ctx.fillRect(72, 44, 22, 2);
+    roundRect(ctx, 14, 23, 72, 4, 2, s.dark, INK, lw * 0.8);
+    raceNumber(ctx, s.num, 50, 46, 5.4, lw);
+    exhausts(ctx, lw, [73], 57);
+  },
+  // 88: fantasy hot rod. Giant rear tires, chopped cab, chrome blower and flames.
+  hotrod(ctx, s, lw) {
+    tiresAt(ctx, lw, 18, 26, [0, 74]);
+    roundRect(ctx, 25, 8, 5, 22, 2, CHROME, INK, lw * 0.6);
+    roundRect(ctx, 70, 8, 5, 22, 2, CHROME, INK, lw * 0.6);
+    polygon(ctx, [24, 56, 76, 56, 78, 34, 70, 28, 30, 28, 22, 34], s.body, INK, lw);
+    polygon(ctx, [24, 54, 24, 40, 29, 46, 31, 36, 35, 45, 39, 38, 40, 50, 34, 54], s.accent, INK, lw * 0.6);
+    polygon(ctx, [76, 54, 76, 40, 71, 46, 69, 36, 65, 45, 61, 38, 60, 50, 66, 54], s.accent, INK, lw * 0.6);
+    polygon(ctx, [26, 53, 27, 45, 30, 49, 32, 43, 35, 50, 31, 53], s.flame, null);
+    polygon(ctx, [74, 53, 73, 45, 70, 49, 68, 43, 65, 50, 69, 53], s.flame, null);
+    polygon(ctx, [32, 28, 35, 18, 65, 18, 68, 28], s.dark, INK, lw);
+    glass(ctx, [36, 27, 38, 22, 62, 22, 64, 27], lw);
+    roundRect(ctx, 40, 5, 20, 14, 3, CHROME, INK, lw);
+    ctx.fillStyle = '#7C828C'; for (let x = 43; x < 58; x += 4) ctx.fillRect(x, 8, 2, 9);
+    roundRect(ctx, 42, 0, 16, 6, 2, s.accent, INK, lw * 0.8);
+    for (const x of [31, 69]) {
+      ctx.beginPath(); ctx.arc(x, 41, 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = LIGHT; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = lw * 0.8; ctx.stroke();
+    }
+    raceNumber(ctx, s.num, 50, 45, 6, lw);
+    exhausts(ctx, lw, [40, 60], 58);
   },
   van(ctx, s, lw) {
     tires(ctx, lw);
@@ -201,38 +237,53 @@ function wheel(ctx, x, y, r, lw, rimColor = CHROME) {
 }
 
 const SIDE = {
-  wedge(ctx, s, lw) {
-    polygon(ctx, [6, 36, 6, 24, 44, 20, 64, 11, 84, 11, 114, 25, 117, 33, 114, 38, 8, 38], s.body, INK, lw);
-    polygon(ctx, [60, 20, 67, 13, 82, 13, 96, 20], GLASS, INK, lw);
-    ctx.fillStyle = s.accent; ctx.fillRect(10, 28, 100, 3);
-    ctx.fillStyle = INK; ctx.fillRect(8, 11, 3, 13);
-    roundRect(ctx, 2, 7, 22, 5, 2, s.dark, INK, lw * 0.8);
-    wheel(ctx, 28, 38, 9, lw); wheel(ctx, 94, 38, 9, lw);
-  },
-  round(ctx, s, lw) {
-    ctx.beginPath();
-    ctx.moveTo(8, 38); ctx.lineTo(6, 28); ctx.quadraticCurveTo(8, 20, 30, 20);
-    ctx.quadraticCurveTo(50, 6, 70, 18); ctx.lineTo(100, 20); ctx.quadraticCurveTo(116, 22, 116, 32); ctx.lineTo(114, 38); ctx.closePath();
-    ctx.fillStyle = s.body; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = lw; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(40, 20); ctx.quadraticCurveTo(52, 9, 66, 19); ctx.closePath(); ctx.fillStyle = GLASS; ctx.fill(); ctx.stroke();
-    ctx.fillStyle = s.accent; ctx.fillRect(12, 27, 100, 2.5); ctx.fillRect(12, 31, 100, 2.5);
-    wheel(ctx, 28, 38, 9, lw); wheel(ctx, 94, 38, 9, lw);
-  },
-  buggy(ctx, s, lw) {
-    ctx.strokeStyle = INK; ctx.lineWidth = lw * 2.2; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(34, 24); ctx.lineTo(44, 6); ctx.lineTo(70, 6); ctx.lineTo(78, 24); ctx.stroke();
-    ctx.strokeStyle = CHROME; ctx.lineWidth = lw; ctx.stroke();
-    polygon(ctx, [14, 34, 16, 24, 40, 22, 84, 22, 108, 28, 110, 34], s.body, INK, lw);
-    roundRect(ctx, 18, 12, 22, 12, 3, CHROME, INK, lw);
-    roundRect(ctx, 22, 5, 12, 8, 2, s.accent, INK, lw);
-    wheel(ctx, 28, 34, 13, lw); wheel(ctx, 96, 36, 11, lw);
+  track(ctx, s, lw) {
+    polygon(ctx, [4, 37, 4, 27, 26, 25, 48, 17, 72, 16, 100, 24, 117, 30, 116, 37], s.body, INK, lw);
+    polygon(ctx, [50, 24, 57, 18.5, 72, 18, 88, 24], GLASS, INK, lw);
+    polygon(ctx, [34, 28, 45, 27, 43, 34, 34, 34], s.dark, INK, lw * 0.8);
+    ctx.fillStyle = s.accent; ctx.fillRect(8, 33, 104, 2);
+    ctx.fillStyle = INK; ctx.fillRect(10, 12, 3, 14);
+    roundRect(ctx, 1, 8, 26, 5, 2, s.dark, INK, lw * 0.8);
+    roundRect(ctx, 1, 4, 4, 12, 1.5, s.body, INK, lw * 0.7);
+    raceNumber(ctx, s.num, 70, 29, 5.2, lw);
+    wheel(ctx, 26, 38, 9, lw); wheel(ctx, 96, 38, 9, lw);
   },
   muscle(ctx, s, lw) {
-    polygon(ctx, [4, 37, 4, 22, 34, 20, 48, 11, 80, 11, 94, 20, 116, 22, 117, 37], s.body, '#5A5A66', lw);
-    polygon(ctx, [50, 19, 55, 13, 78, 13, 88, 19], GLASS, '#5A5A66', lw);
-    ctx.fillStyle = s.accent; ctx.fillRect(6, 25, 108, 3);
-    ctx.fillStyle = s.glow; ctx.globalAlpha = 0.5; ctx.fillRect(14, 41, 94, 3); ctx.globalAlpha = 1;
-    wheel(ctx, 26, 37, 9, lw, '#8A8F99'); wheel(ctx, 96, 37, 9, lw, '#8A8F99');
+    polygon(ctx, [3, 38, 3, 24, 10, 22, 36, 21, 50, 11, 70, 11, 84, 21, 116, 23, 118, 28, 117, 38], s.body, INK, lw);
+    polygon(ctx, [52, 20, 56, 13.5, 68, 13.5, 80, 20], GLASS, INK, lw);
+    polygon(ctx, [94, 21.5, 103, 18, 108, 22], s.dark, INK, lw * 0.8);
+    ctx.fillStyle = s.accent; ctx.fillRect(6, 25, 108, 2.5);
+    roundRect(ctx, 113, 29, 7, 6, 2, CHROME, INK, lw * 0.6);
+    roundRect(ctx, 0, 29, 7, 6, 2, CHROME, INK, lw * 0.6);
+    raceNumber(ctx, s.num, 62, 31, 6, lw);
+    wheel(ctx, 24, 38, 10, lw); wheel(ctx, 97, 38, 10, lw);
+  },
+  jdm(ctx, s, lw) {
+    ctx.beginPath();
+    ctx.moveTo(4, 37); ctx.lineTo(4, 28); ctx.quadraticCurveTo(6, 22, 22, 21); ctx.lineTo(38, 20);
+    ctx.quadraticCurveTo(52, 8, 72, 12); ctx.quadraticCurveTo(84, 15, 94, 22); ctx.lineTo(108, 24);
+    ctx.quadraticCurveTo(118, 26, 117, 33); ctx.lineTo(116, 37); ctx.closePath();
+    ctx.fillStyle = s.body; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = lw; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(44, 20); ctx.quadraticCurveTo(54, 11.5, 70, 14); ctx.quadraticCurveTo(80, 16.5, 86, 21); ctx.closePath();
+    ctx.fillStyle = GLASS; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = s.accent; ctx.fillRect(10, 31, 100, 2);
+    ctx.fillStyle = INK; ctx.fillRect(9, 19, 2, 4);
+    roundRect(ctx, 2, 16, 15, 3, 1.5, s.dark, INK, lw * 0.7);
+    raceNumber(ctx, s.num, 62, 28, 5.2, lw);
+    wheel(ctx, 26, 38, 9, lw); wheel(ctx, 94, 38, 9, lw);
+  },
+  hotrod(ctx, s, lw) {
+    polygon(ctx, [14, 34, 14, 24, 40, 22, 44, 14, 64, 14, 66, 22, 110, 24, 114, 30, 112, 34], s.body, INK, lw);
+    polygon(ctx, [112, 26, 98, 23.5, 92, 27, 84, 23.5, 78, 28, 70, 24.5, 64, 29.5, 78, 31, 90, 30, 104, 31.5, 112, 31], s.accent, INK, lw * 0.6);
+    polygon(ctx, [111, 27.5, 100, 26, 95, 28.5, 88, 27, 84, 30, 96, 30.5, 110, 30], s.flame, null);
+    polygon(ctx, [46, 21, 48, 16.5, 62, 16.5, 63, 21], GLASS, INK, lw * 0.8);
+    roundRect(ctx, 72, 15, 24, 9, 2, CHROME, INK, lw * 0.8);
+    roundRect(ctx, 76, 7, 14, 9, 2, CHROME, INK, lw * 0.8);
+    roundRect(ctx, 77, 3.5, 12, 4, 1.5, s.accent, INK, lw * 0.7);
+    ctx.strokeStyle = CHROME; ctx.lineWidth = lw * 1.2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(75, 24); ctx.lineTo(70, 36); ctx.moveTo(81, 24); ctx.lineTo(78, 36); ctx.moveTo(87, 24); ctx.lineTo(86, 36); ctx.stroke();
+    raceNumber(ctx, s.num, 54, 28, 5, lw);
+    wheel(ctx, 28, 32, 14, lw); wheel(ctx, 104, 38, 7, lw);
   },
 };
 

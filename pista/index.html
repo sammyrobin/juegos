@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TURBO PISTA · Juegos · Samuel Torres</title>
-<meta name="description" content="TURBO PISTA: carrera infinita en pseudo-3D sobre una pista naranja de juguete. Esquiva obstáculos, junta monedas, usa el nitro y da loops. Gratis en el navegador, en celular y PC.">
+<meta name="description" content="TURBO PISTA: carrera infinita en pseudo-3D sobre una pista naranja de juguete que cruza la casa. Esquiva obstáculos, junta monedas, usa el nitro, salta entre mesas y da loops. Gratis en el navegador, en celular y PC.">
 <meta name="theme-color" content="#141414">
 <link rel="canonical" href="https://samueltorres.dev/juegos/pista/">
 <link rel="alternate" hreflang="es" href="https://samueltorres.dev/juegos/pista/">
@@ -71,29 +71,26 @@
     <div class="panel panel-start">
       <div class="start-head">
         <h1 class="logo" id="start-title"><span class="logo-turbo">Turbo</span> <span class="logo-pista">Pista</span></h1>
-        <p class="tagline">Carrera infinita en una pista de juguete. ¡Solo izquierda y derecha!</p>
+        <p class="tagline">Una pista de juguete infinita que cruza toda la casa. ¡Solo izquierda y derecha!</p>
       </div>
       <fieldset class="car-picker">
         <legend>Elige tu auto</legend>
-        <div class="cars">
-          <label class="car-option"><input type="radio" name="car" value="0" checked><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Brasa</span><span class="car-desc">Cuña deportiva con alerón</span></label>
-          <label class="car-option"><input type="radio" name="car" value="1"><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Marea</span><span class="car-desc">Roadster de curvas suaves</span></label>
-          <label class="car-option"><input type="radio" name="car" value="2"><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Chispa</span><span class="car-desc">Buggy de ruedas gigantes</span></label>
-          <label class="car-option"><input type="radio" name="car" value="3"><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Eclipse</span><span class="car-desc">Muscle car con franjas neón</span></label>
-        </div>
+        <div class="cars" id="cars"></div>
       </fieldset>
       <div class="start-actions">
         <button class="btn btn-primary btn-big" id="btn-start" type="button">Arrancar</button>
         <p class="best-line">Récord: <strong id="start-best">0</strong></p>
+        <a class="btn btn-blue collection-link" href="/garage/">Ver mi colección real</a>
       </div>
       <details class="howto">
         <summary>Cómo se juega</summary>
         <ul>
           <li><kbd>←</kbd> <kbd>→</kbd> o <kbd>A</kbd> <kbd>D</kbd> para moverte. En celular toca la mitad izquierda o derecha, desliza o usa los botones.</li>
-          <li>Esquiva conos, autos rivales y huecos: cada choque cuesta una de tus 3 vidas. El aceite te hace derrapar.</li>
+          <li>Cada auto maneja distinto: mira su velocidad, aceleración y manejo. El lanzador te dispara en la salida.</li>
+          <li>Esquiva conos, autos rivales y huecos: cada choque cuesta una de tus 3 vidas. El aceite te hace derrapar y los bordes sacan chispas.</li>
           <li>Junta monedas <span aria-hidden="true">🟡</span> y rayos de nitro <span aria-hidden="true">⚡</span> para ir más rápido y atravesar conos.</li>
-          <li>Las rampas te hacen volar y los loops dan la vuelta solos. Las curvas te empujan hacia afuera.</li>
-          <li>Cada nivel es más rápido y cambia el ambiente: día, atardecer y noche. <kbd>Espacio</kbd> o <kbd>P</kbd> pausan.</li>
+          <li>Salta entre mesas y pasa por el centro del aro de fuego. Las curvas peraltadas te sostienen y los loops dan la vuelta solos.</li>
+          <li>Cada nivel es más rápido y es otro cuarto de la casa: cuarto, sala, cocina y jardín. <kbd>Espacio</kbd> o <kbd>P</kbd> pausan.</li>
         </ul>
       </details>
     </div>

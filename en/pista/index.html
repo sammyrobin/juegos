@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TURBO PISTA · Games · Samuel Torres</title>
-<meta name="description" content="TURBO PISTA: an endless pseudo-3D race on an orange toy track. Dodge obstacles, grab coins, fire the nitro and loop the loop. Free in the browser, on mobile and desktop.">
+<meta name="description" content="TURBO PISTA: an endless pseudo-3D race on an orange toy track that runs through the house. Dodge obstacles, grab coins, fire the nitro, jump between tables and loop the loop. Free in the browser, on mobile and desktop.">
 <meta name="theme-color" content="#141414">
 <link rel="canonical" href="https://samueltorres.dev/juegos/en/pista/">
 <link rel="alternate" hreflang="es" href="https://samueltorres.dev/juegos/pista/">
@@ -71,29 +71,26 @@
     <div class="panel panel-start">
       <div class="start-head">
         <h1 class="logo" id="start-title"><span class="logo-turbo">Turbo</span> <span class="logo-pista">Pista</span></h1>
-        <p class="tagline">An endless race on a toy track. Just left and right!</p>
+        <p class="tagline">An endless toy track that runs through the whole house. Just left and right!</p>
       </div>
       <fieldset class="car-picker">
         <legend>Pick your car</legend>
-        <div class="cars">
-          <label class="car-option"><input type="radio" name="car" value="0" checked><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Ember</span><span class="car-desc">Sports wedge with a big wing</span></label>
-          <label class="car-option"><input type="radio" name="car" value="1"><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Tide</span><span class="car-desc">Smooth, rounded roadster</span></label>
-          <label class="car-option"><input type="radio" name="car" value="2"><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Spark</span><span class="car-desc">Buggy with giant wheels</span></label>
-          <label class="car-option"><input type="radio" name="car" value="3"><canvas width="240" height="100" aria-hidden="true"></canvas><span class="car-name">Eclipse</span><span class="car-desc">Muscle car with neon stripes</span></label>
-        </div>
+        <div class="cars" id="cars"></div>
       </fieldset>
       <div class="start-actions">
         <button class="btn btn-primary btn-big" id="btn-start" type="button">Start</button>
         <p class="best-line">Best: <strong id="start-best">0</strong></p>
+        <a class="btn btn-blue collection-link" href="/garage/en/">See my real collection</a>
       </div>
       <details class="howto">
         <summary>How to play</summary>
         <ul>
           <li><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to move. On a phone, tap the left or right half, swipe, or use the buttons.</li>
-          <li>Dodge cones, rival cars and holes: every crash costs one of your 3 lives. Oil makes you skid.</li>
+          <li>Every car drives differently: check its speed, acceleration and handling. The launcher fires you off the start.</li>
+          <li>Dodge cones, rival cars and holes: every crash costs one of your 3 lives. Oil makes you skid and the rails throw sparks.</li>
           <li>Grab coins <span aria-hidden="true">🟡</span> and nitro bolts <span aria-hidden="true">⚡</span> to go faster and smash through cones.</li>
-          <li>Ramps make you fly and loops spin you around by themselves. Curves push you outwards.</li>
-          <li>Every level is faster and changes the scenery: day, sunset and night. <kbd>Space</kbd> or <kbd>P</kbd> pauses.</li>
+          <li>Jump between tables and fly through the middle of the fire hoop. Banked curves hold you in and loops spin you around by themselves.</li>
+          <li>Every level is faster and is another room of the house: bedroom, living room, kitchen and garden. <kbd>Space</kbd> or <kbd>P</kbd> pauses.</li>
         </ul>
       </details>
     </div>

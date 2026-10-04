@@ -1,6 +1,6 @@
 // TURBO PISTA — game states and glue between the modules.
 //
-//   menu ──Arrancar──▶ countdown ──3·2·1·¡YA!──▶ play ◀──▶ paused
+//   menu ──Arrancar──▶ countdown ──3·2·1·¡YA! (booster)──▶ play ◀──▶ paused
 //     ▲                                          │
 //     └──────────── Cambiar auto ◀── over ◀──────┘ (3 lives lost)
 //
@@ -18,7 +18,7 @@ import { DRAW_DISTANCE, PLAYER_Z, Particles, Renderer } from './render.js';
 import { SpriteBank } from './sprites.js';
 import { UI } from './ui.js';
 import { load, save } from './storage.js';
-import { LANE_X, LEVEL_LEN, SEG, Track, difficulty, levelAt } from './track.js';
+import { LANE_X, LEVEL_LEN, PIECE, SEG, Track, difficulty, levelAt } from './track.js';
 import { clamp, easeInOut, formatInt } from './util.js';
 
 const LOOP_TIME = 2.6;          // seconds of loop cinematic
@@ -59,6 +59,9 @@ const S = {
   overTimer: 0,
   fallPending: false,
   aiLane: 1, aiTimer: 0,
+  launch: null,           // start booster: { pull } while arming, { fired } after the release
+  zoom: 0,                // nitro "toy zoom" punch, 1 → 0
+  lastPiece: 0, clackTimer: 0,
   best: saved.best,
 };
 
@@ -76,7 +79,8 @@ function newRun(menu) {
   Object.assign(S, {
     position: startIndex * SEG, distance: 0, coins: 0, bonus: 0, level,
     ambFrom: ambientIndexForLevel(level), ambTo: ambientIndexForLevel(level), ambT: 1, shake: 0, flash: 0,
-    loop: null, overTimer: 0, fallPending: false, aiLane: 1, aiTimer: 0,
+    loop: null, overTimer: 0, fallPending: false, aiLane: 1, aiTimer: 0, launch: null, zoom: 0,
+    lastPiece: Math.floor((startIndex * SEG + PLAYER_Z) / (SEG * PIECE)), clackTimer: 0,
   });
   S.startIndex = startIndex;
   track.ensure(startIndex + DRAW_DISTANCE + 20);
@@ -109,6 +113,7 @@ function startRace() {
   setMode('countdown');
   S.countdown = 0;
   S.countStep = null;
+  S.launch = { pull: 0 };
   document.activeElement?.blur?.();
   sound.startEngine();
 }
@@ -157,6 +162,11 @@ function update(dt) {
   S.ambT = Math.min(1, S.ambT + dt / 3);
   S.shake = Math.max(0, S.shake - dt * 2.5);
   S.flash = Math.max(0, S.flash - dt * 2.2);
+  S.zoom = Math.max(0, S.zoom - dt * 1.6);
+  if (S.launch && S.launch.fired !== undefined) {
+    S.launch.fired += dt;
+    if (S.launch.fired > 0.8) S.launch = null;
+  }
 
   if (S.mode === 'countdown') return updateCountdown(dt);
   if (S.loop) return updateLoop(dt);
@@ -172,7 +182,7 @@ function update(dt) {
   else if (alive) steer = input.steer;
 
   const top = S.mode === 'over' || S.overTimer > 0 ? 0 : menu ? d.maxSpeed * 0.85 : d.maxSpeed;
-  const ev = player.update(dt, steer, seg.curve, top, menu || alive);
+  const ev = player.update(dt, steer, seg.curve, top, menu || alive, seg.bank);
   if (ev === 'land' && !menu) {
     sound.land();
     dust();
@@ -192,6 +202,14 @@ function update(dt) {
   const lvl = levelAt(Math.floor(curZ / SEG));
   if (lvl > S.level) levelUp(lvl, menu);
 
+  // The wheels clack over every joint between two plastic track pieces.
+  const piece = Math.floor(curZ / (SEG * PIECE));
+  S.clackTimer -= dt;
+  if (piece !== S.lastPiece) {
+    S.lastPiece = piece;
+    if (racing && !player.airborne && S.clackTimer <= 0) { sound.clack(); S.clackTimer = 0.07; }
+  }
+
   if (racing) {
     if (player.scraping && !player.airborne) sparks();
     sound.setScrape(player.scraping);
@@ -209,17 +227,32 @@ function update(dt) {
 function updateCountdown(dt) {
   S.countdown += dt;
   const step = S.countdown < COUNTDOWN_STEP ? 3 : S.countdown < COUNTDOWN_STEP * 2 ? 2 : S.countdown < COUNTDOWN_STEP * 3 ? 1 : 0;
+  // The car is pulled back against the booster spring, one click per light.
+  if (S.launch && S.launch.pull !== undefined) S.launch.pull = Math.min(1, S.countdown / (COUNTDOWN_STEP * 2.6));
   if (step !== S.countStep) {
     S.countStep = step;
     ui.countdown(step);
     sound.countdown(step === 0);
+    if (step > 0) sound.ratchet();
     if (step === 0) {
       ui.announce(t.go);
       setMode('play');
       ui.setMode('play');
+      launch();
       setTimeout(() => { if (S.countStep === 0) ui.countdown(null); }, 800);
     }
   }
+}
+
+/** ¡YA!: the booster fires the car off the line. */
+function launch() {
+  const d = difficulty(S.level);
+  S.launch = { fired: 0 };
+  player.speed = d.maxSpeed * 0.8 * player.feel.top;
+  sound.spring();
+  S.zoom = 0.7;
+  const c = carScreen();
+  particles.burst(c.x, c.y, 10, { color: 'rgba(255,243,227,.85)', size: 10, speed: 380, life: 0.5, g: -150 });
 }
 
 function updateLoop(dt) {
@@ -253,6 +286,7 @@ function handle(e, menu) {
       player.nitro = NITRO_TIME;
       if (menu) return;
       sound.nitro();
+      S.zoom = 1;
       S.flash = 0.5;
       S.flashColor = '#6C8CFF';
       popText(t.nitro, '#6C8CFF');
@@ -267,6 +301,14 @@ function handle(e, menu) {
       popText(t.jump, '#FFFFFF');
       break;
     }
+    case 'firering':
+      if (menu) return;
+      S.bonus += 150;
+      sound.fireRing();
+      popText(t.ring, '#FF9A1F');
+      particles.burst(c.x, c.y - c.h * 0.8, 18, { color: '#FF7A00', size: 7, speed: 520, life: 0.6, g: 300 });
+      particles.burst(c.x, c.y - c.h * 0.8, 10, { color: '#FFD23F', size: 5, speed: 380, life: 0.5, g: 200 });
+      break;
     case 'loop':
       if (menu) return;
       S.loop = { t: 0, exitZ: (e.item.index + 40) * SEG };
@@ -381,11 +423,19 @@ function popText(text, color) {
   particles.spawn({ text, color, x: c.x, y: c.y - c.h * 1.2, vy: -160, life: 0.9, size: 46 });
 }
 
+/** Sparks streaking off the plastic rail the car is rubbing. */
 function sparks() {
-  if (Math.random() > 0.5) return;
   const c = carScreen();
   const side = Math.sign(player.x) || 1;
-  particles.spawn({ x: c.x + side * c.w * 0.45, y: c.y - c.h * 0.2, vx: -side * (200 + Math.random() * 300), vy: -200 - Math.random() * 300, g: 1400, life: 0.35, size: 3, color: Math.random() < 0.5 ? '#FFCC00' : '#FFFFFF' });
+  const n = reducedMotion.matches ? 1 : 3;
+  for (let i = 0; i < n; i++) {
+    particles.spawn({
+      shape: 'streak', x: c.x + side * c.w * 0.48, y: c.y - c.h * (0.05 + Math.random() * 0.25),
+      vx: -side * (150 + Math.random() * 450), vy: -150 - Math.random() * 450, g: 1500,
+      life: 0.25 + Math.random() * 0.2, size: 2 + Math.random() * 2,
+      color: ['#FFFFFF', '#FFE36B', '#FFB000'][i % 3],
+    });
+  }
 }
 
 function dust() {
@@ -408,7 +458,7 @@ function render(dt) {
   }
 
   if (S.loop) {
-    renderer.loopScene(S.loop.t, pal, sideCars[player.car], S.time, t.loop);
+    renderer.loopScene(S.loop.t, pal, sideCars[player.car], S.time, t.loop, S.ambTo);
     const edge = Math.max(0, 1 - S.loop.t / 0.07, (S.loop.t - 0.93) / 0.07);
     if (edge > 0) {
       const ctx = renderer.ctx;
@@ -419,10 +469,14 @@ function render(dt) {
     }
   } else {
     const nitroLines = player.boosting ? Math.min(1, player.nitro * 2) : 0;
+    const launchLines = S.launch && S.launch.fired !== undefined ? 1 - S.launch.fired / 0.8 : 0;
     renderer.frame({
       track, position: S.position, player, rivals: obstacles.bySegment, pal, amb,
+      ambFrom: S.ambFrom, ambTo: S.ambTo, ambK: k,
       time: S.time, shake: S.shake, flash: S.flash, flashColor: S.flashColor, particles,
-      speedLines: S.mode === 'menu' ? 0 : nitroLines, showPlayer: true,
+      speedLines: S.mode === 'menu' ? 0 : Math.max(nitroLines, launchLines),
+      zoom: S.zoom, blur: S.mode === 'menu' ? 0 : player.boosting ? 0.55 + 0.45 * S.zoom : 0,
+      launch: S.mode === 'menu' ? null : S.launch, showPlayer: true,
     });
   }
 
@@ -490,8 +544,11 @@ on('btn-sound', () => {
 
 document.querySelectorAll('input[name="car"]').forEach((radio) => {
   radio.addEventListener('change', () => {
-    player.car = ui.selectedCar();
+    player.setCar(ui.selectedCar());
     save({ car: player.car });
+    // The blister pops open.
+    sound.unlock();
+    sound.crinkle();
   });
 });
 

@@ -82,11 +82,33 @@ export class Sound {
     src.stop(t0 + dur + 0.05);
   }
 
-  // ---- engine: two detuned oscillators through a low-pass filter ----------
+  // ---- engine: a small toy motor (two detuned oscillators through a low-pass
+  // filter) plus the rattle of plastic wheels (noise pulsed by an LFO) ----------
 
   startEngine() {
     if (!this.ctx || this.engine) return;
     const c = this.ctx;
+    // Plastic wheels: band-passed noise whose volume is pulsed faster with speed.
+    const wheels = c.createBufferSource();
+    wheels.buffer = this.noise;
+    wheels.loop = true;
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1400;
+    bp.Q.value = 1.2;
+    const rattle = c.createGain();
+    rattle.gain.value = 0.5;
+    const lfo = c.createOscillator();
+    lfo.type = 'square';
+    lfo.frequency.value = 8;
+    const depth = c.createGain();
+    depth.gain.value = 0.5;
+    lfo.connect(depth).connect(rattle.gain);
+    const wheelGain = c.createGain();
+    wheelGain.gain.value = 0;
+    wheels.connect(bp).connect(rattle).connect(wheelGain).connect(this.master);
+    wheels.start();
+    lfo.start();
     const saw = c.createOscillator();
     const sq = c.createOscillator();
     saw.type = 'sawtooth';
@@ -104,27 +126,29 @@ export class Sound {
     lp.connect(g).connect(this.master);
     saw.start();
     sq.start();
-    this.engine = { saw, sq, lp, g };
+    this.engine = { saw, sq, lp, g, wheels, lfo, wheelGain };
   }
 
   /** ratio: 0 (idle) … 1 (top speed); nitro adds a brighter, higher note. */
   updateEngine(ratio, nitro = false, volume = 1) {
     if (!this.engine) return;
     const t = this.ctx.currentTime;
-    const f = 55 + ratio * 150 + (nitro ? 45 : 0);
+    const f = 90 + ratio * 260 + (nitro ? 70 : 0);
     this.engine.saw.frequency.setTargetAtTime(f, t, 0.08);
     this.engine.sq.frequency.setTargetAtTime(f * 0.5 + 1.5, t, 0.08);
-    this.engine.lp.frequency.setTargetAtTime(380 + ratio * 1500 + (nitro ? 900 : 0), t, 0.1);
-    this.engine.g.gain.setTargetAtTime((0.045 + ratio * 0.05) * volume, t, 0.1);
+    this.engine.lp.frequency.setTargetAtTime(500 + ratio * 1700 + (nitro ? 900 : 0), t, 0.1);
+    this.engine.g.gain.setTargetAtTime((0.03 + ratio * 0.035) * volume, t, 0.1);
+    this.engine.lfo.frequency.setTargetAtTime(6 + ratio * 34, t, 0.1);
+    this.engine.wheelGain.gain.setTargetAtTime(ratio > 0.02 ? (0.025 + ratio * 0.06) * volume : 0, t, 0.08);
   }
 
   stopEngine() {
     if (!this.engine) return;
-    const { saw, sq, g } = this.engine;
+    const { saw, sq, g, wheels, lfo, wheelGain } = this.engine;
     const t = this.ctx.currentTime;
     g.gain.setTargetAtTime(0, t, 0.08);
-    saw.stop(t + 0.5);
-    sq.stop(t + 0.5);
+    wheelGain.gain.setTargetAtTime(0, t, 0.05);
+    for (const node of [saw, sq, wheels, lfo]) node.stop(t + 0.5);
     this.engine = null;
   }
 
@@ -202,6 +226,52 @@ export class Sound {
 
   gameOver() {
     [392, 330, 262, 196].forEach((f, i) => this.tone({ type: 'triangle', from: f, dur: 0.3, vol: 0.16, delay: i * 0.18 }));
+  }
+
+  /** The subtle clack of the wheels crossing a joint between two track pieces. */
+  clack() {
+    this.tone({ type: 'square', from: 1900, to: 1200, dur: 0.025, vol: 0.035 });
+    this.burst({ dur: 0.03, vol: 0.05, filter: 'highpass', from: 3000, to: 2500, q: 0.7 });
+  }
+
+  /** Booster release: a spring boing with a wobble, and the latch snapping. */
+  spring() {
+    if (!this.ctx) return;
+    const t0 = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const wob = this.ctx.createOscillator();
+    const wobGain = this.ctx.createGain();
+    const g = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(160, t0);
+    osc.frequency.exponentialRampToValueAtTime(520, t0 + 0.5);
+    wob.frequency.value = 22;
+    wobGain.gain.setValueAtTime(60, t0);
+    wobGain.gain.exponentialRampToValueAtTime(1, t0 + 0.6);
+    wob.connect(wobGain).connect(osc.frequency);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.24, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.65);
+    osc.connect(g).connect(this.master);
+    osc.start(t0); wob.start(t0);
+    osc.stop(t0 + 0.7); wob.stop(t0 + 0.7);
+    this.tone({ type: 'square', from: 2400, to: 900, dur: 0.04, vol: 0.08 });
+  }
+
+  /** Ratchet clicks while the spring is pulled back. */
+  ratchet() {
+    this.tone({ type: 'square', from: 1300, to: 800, dur: 0.03, vol: 0.06 });
+  }
+
+  /** Blister pack popping open: a crinkle of plastic. */
+  crinkle() {
+    for (let i = 0; i < 4; i++) this.burst({ dur: 0.04, vol: 0.09, filter: 'highpass', from: 4200 + i * 600, to: 2600, q: 0.6, delay: i * 0.035 });
+    this.tone({ type: 'triangle', from: 700, to: 1100, dur: 0.12, vol: 0.05, delay: 0.1 });
+  }
+
+  fireRing() {
+    this.burst({ dur: 0.7, vol: 0.3, filter: 'lowpass', from: 2500, to: 300, q: 0.5 });
+    [659, 880, 1175].forEach((f, i) => this.tone({ type: 'square', from: f, dur: 0.12, vol: 0.07, delay: 0.08 + i * 0.08 }));
   }
 
   click() { this.tone({ type: 'square', from: 660, dur: 0.05, vol: 0.05 }); }

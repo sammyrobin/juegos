@@ -2,14 +2,23 @@
 // rival cars and scenery. Places them when a section is generated, moves the rivals
 // and reports what the player touched.
 
-import { LANE_X, ROAD_W, SEG, difficulty } from './track.js';
+import { AMBIENTS, ambientIndexForLevel } from './palette.js';
+import { JUMP, LANE_X, LEVEL_LEN, ROAD_W, SEG, difficulty } from './track.js';
 import { chance, pick, rand, randInt } from './util.js';
 
 export const CAR_W = 540;          // player car width in world units
 const RIVAL_W = 580;
 const HAZARDS = new Set(['cone', 'oil', 'ramp']);
 
-const SCENERY = ['tree', 'tree', 'tree', 'blocks', 'flag', 'tires'];
+// Toys and giant things next to the track, per room. [sprite, world width]
+const SCENERY = {
+  room: [['books', 1500], ['blocks', 1100], ['crayon', 520], ['ball', 1000], ['tires', 900], ['flag', 520]],
+  living: [['cushion', 1500], ['mug', 1000], ['plant', 1400], ['books', 1500], ['tires', 900]],
+  kitchen: [['apple', 950], ['orange', 900], ['cereal', 1300], ['mug', 1000], ['flag', 520]],
+  garden: [['flower', 1200], ['flower', 1200], ['mushroom', 1000], ['rock', 1100], ['tires', 900]],
+};
+export const RING_R = 560;         // fire ring radius (world units)
+export const RING_ALT = 700;       // height of its center over the table top
 
 export class Obstacles {
   constructor() {
@@ -30,7 +39,9 @@ export class Obstacles {
     const add = (index, item) => { const seg = track.get(index); if (seg) seg.items.push({ hit: false, phase: Math.random() * 6.28, index, ...item }); };
     const coins = (start, count, lane, gap = 3) => { for (let n = 0; n < count; n++) add(start + n * gap, { kind: 'coin', x: LANE_X[lane], w: 320 }); };
 
-    this.scenery(track, from, to, add);
+    this.scenery(track, from, to, add, level);
+    // A doorway into the next room at every level boundary.
+    for (let i = from; i < to; i++) if (i > 0 && i % LEVEL_LEN === 0) add(i, { kind: 'door', x: 0, w: ROAD_W * 2, scenery: true });
 
     if (kind === 'start') {
       coins(from + 58, 8, 1);
@@ -43,14 +54,20 @@ export class Obstacles {
       return;
     }
     if (kind === 'jump') {
-      const ramp = from + 34;
+      // Table to table: the gap floor is TABLE_DROP lower, so items over it are raised by it.
+      const ramp = from + JUMP.ramp;
       coins(ramp - 22, 6, 1, 3);
       add(ramp, { kind: 'ramp', x: 0, w: ROAD_W * 2, full: true });
-      for (let i = ramp + 4; i < ramp + 17; i++) track.get(i).gap = true;
+      const tableY = track.get(from).p1.world.y;
+      const drop = (i) => tableY - track.get(i).p1.world.y;
       for (let n = 0; n < 9; n++) {
+        if (n === 4) continue; // the fire ring is there
         const t = n / 8;
-        add(ramp + 4 + n * 2, { kind: 'air', x: LANE_X[1], w: 320, alt: 250 + Math.sin(t * Math.PI) * 650 });
+        const i = from + JUMP.gapFrom - 2 + n * 2;
+        add(i, { kind: 'air', x: LANE_X[1], w: 320, alt: drop(i) + 250 + Math.sin(t * Math.PI) * 650 });
       }
+      const ring = from + JUMP.gapFrom + 6;
+      add(ring, { kind: 'firering', x: 0, w: RING_R * 2, alt: drop(ring) + RING_ALT });
       return;
     }
 
@@ -107,16 +124,22 @@ export class Obstacles {
     }
   }
 
-  scenery(track, from, to, add) {
+  scenery(track, from, to, add, level) {
+    const room = AMBIENTS[ambientIndexForLevel(level)].name;
+    const list = SCENERY[room];
+    // Garden stake lights at night; indoors, toy marker posts along the rails.
+    const post = room === 'garden' ? ['lamp', 420] : ['post', 300];
     for (let i = from; i < to; i++) {
+      const seg = track.get(i);
+      if (seg.gap || seg.face) continue;
       if (i % 24 === 0) {
-        add(i, { kind: 'lamp', x: -1.22, w: 420, scenery: true });
-        add(i, { kind: 'lamp', x: 1.22, w: 420, scenery: true });
+        add(i, { kind: post[0], x: -1.22, w: post[1], scenery: true });
+        add(i, { kind: post[0], x: 1.22, w: post[1], scenery: true });
       }
       if (i % 90 === 45) add(i, { kind: chance(0.5) ? 'sign' : 'sign2', x: pick([-1, 1]) * 1.75, w: 2200, scenery: true });
-      else if (chance(0.22)) {
-        const kind = pick(SCENERY);
-        add(i, { kind, x: pick([-1, 1]) * rand(1.6, 3.6), w: kind === 'tree' ? 1300 : kind === 'blocks' ? 1100 : kind === 'flag' ? 520 : 900, scenery: true });
+      else if (chance(0.2)) {
+        const [kind, w] = pick(list);
+        add(i, { kind, x: pick([-1, 1]) * rand(1.6, 3.6), w, scenery: true });
       }
     }
   }
@@ -184,6 +207,11 @@ export class Obstacles {
         if (item.hit || item.scenery || item.kind === 'rivalSpawn') continue;
         const reach = (item.w / 2 + CAR_W / 2) / ROAD_W;
         const dx = Math.abs(item.x - px);
+        if (item.kind === 'firering') {
+          // Flying through the middle of the ring scores; missing it costs nothing.
+          if (player.alt > 200 && Math.abs(item.x - px) < (RING_R * 0.62) / ROAD_W) { item.hit = true; events.push({ type: 'firering', item }); }
+          continue;
+        }
         const pickup = item.kind === 'coin' || item.kind === 'nitro' || item.kind === 'air';
         if (dx > reach * (pickup ? 1.1 : 0.8) && item.kind !== 'loop') continue;
         if (item.kind === 'coin' && airborne) continue;

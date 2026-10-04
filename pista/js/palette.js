@@ -1,45 +1,52 @@
-// Ambients: day → sunset → night, one per level (then the cycle repeats, harder).
-// Colors are hex here and converted once to rgb triples so two ambients can be blended
+// Rooms: the toy track crosses the house, one room per level (then the cycle repeats,
+// harder): bedroom (morning) → living room (evening lamp) → kitchen → garden (night).
+// Colors are hex here and converted once to rgb triples so two rooms can be blended
 // smoothly while the level banner is on screen.
 
 import { hexToRgb, lerp, mixRgb, rgb, shade } from './util.js';
 
-const RAW = [
+const ROAD = { roadA: '#FF8A1F', roadB: '#F7821A', groove: '#D9660A', seam: '#A84800', wallA: '#F07A12', wallB: '#E87010', wallTop: '#FFB45C' };
+
+export const RAW = [
   {
-    name: 'day',
-    skyTop: '#4FB3FF', skyBottom: '#D6F0FF',
-    sun: '#FFE36B', sunY: 0.55, sunR: 0.07,
-    hillFar: '#9ED88F', hillNear: '#5DB35A', city: '#7FC6E8',
-    grassA: '#8FD16B', grassB: '#84C95F',
-    roadA: '#FF8A1F', roadB: '#F77F12', lane: '#FFCC00',
-    wallA: '#1F4BFF', wallB: '#3B63FF', wallTop: '#A8BCFF',
-    fog: '#D6F0FF', fogDensity: 3.2,
+    name: 'room', floor: 'planks',
+    skyTop: '#A9D8F5', skyBottom: '#D3EEFB', sun: '#FFF4C2', sunY: 0.5, sunR: 0,
+    trim: '#FFFFFF', furnA: '#E85D75', furnB: '#F2C14E', furnC: '#4F7CE0', wood: '#C98B4F',
+    floorA: '#D9A066', floorB: '#CF965C', floorLine: '#A8703E', rug: '#3F73D8', rugEdge: '#FFF3E3', rugW: 2.1,
+    ...ROAD,
+    fog: '#D3EEFB', fogDensity: 3.0,
     tint: '#000000', tintAlpha: 0,
-    night: 0, stars: 0, clouds: 1,
+    night: 0, stars: 0,
   },
   {
-    name: 'sunset',
-    skyTop: '#3B2A77', skyBottom: '#FFB35C',
-    sun: '#FFD166', sunY: 0.92, sunR: 0.14,
-    hillFar: '#A0527A', hillNear: '#6B3A6E', city: '#8A4A7A',
-    grassA: '#8FA35A', grassB: '#83974F',
-    roadA: '#F2701A', roadB: '#E9660F', lane: '#FFD23F',
-    wallA: '#2C3FBF', wallB: '#3A4FD6', wallTop: '#B7A6F0',
-    fog: '#FFB35C', fogDensity: 3.8,
-    tint: '#5A1E3C', tintAlpha: 0.22,
-    night: 0.35, stars: 0.15, clouds: 0.8,
+    name: 'living', floor: 'planks',
+    skyTop: '#E39A62', skyBottom: '#F6CFA0', sun: '#FFD166', sunY: 0.5, sunR: 0,
+    trim: '#8A4B2A', furnA: '#2F8A78', furnB: '#7A3E2B', furnC: '#F2E3C6', wood: '#8A4B2A',
+    floorA: '#9C5F37', floorB: '#935833', floorLine: '#6E3F20', rug: '#B8323F', rugEdge: '#F2C14E', rugW: 2.8,
+    ...ROAD, roadA: '#F77F1A', roadB: '#EE7814',
+    fog: '#F6CFA0', fogDensity: 3.4,
+    tint: '#5A1E3C', tintAlpha: 0.12,
+    night: 0.3, stars: 0,
   },
   {
-    name: 'night',
-    skyTop: '#050818', skyBottom: '#1B2350',
-    sun: '#F4F1DE', sunY: 0.35, sunR: 0.05,
-    hillFar: '#18214A', hillNear: '#0F1533', city: '#141C44',
-    grassA: '#1C3A2C', grassB: '#183426',
-    roadA: '#C35A18', roadB: '#B75214', lane: '#FFD84A',
-    wallA: '#1735B5', wallB: '#2344D0', wallTop: '#6C8CFF',
+    name: 'kitchen', floor: 'tiles',
+    skyTop: '#C4EADF', skyBottom: '#E9F8F3', sun: '#FFFFFF', sunY: 0.5, sunR: 0,
+    trim: '#2E8B7A', furnA: '#FAFAF5', furnB: '#E4572E', furnC: '#7FB3C8', wood: '#C98B4F',
+    floorA: '#F4F1EA', floorB: '#EDE8DD', floorLine: '#34495E', rug: '#34495E', rugEdge: '#34495E', rugW: 0,
+    ...ROAD,
+    fog: '#E9F8F3', fogDensity: 3.0,
+    tint: '#000000', tintAlpha: 0,
+    night: 0, stars: 0,
+  },
+  {
+    name: 'garden', floor: 'grass',
+    skyTop: '#050818', skyBottom: '#1B2350', sun: '#F4F1DE', sunY: 0.32, sunR: 0.05,
+    trim: '#5A4030', furnA: '#E85D9E', furnB: '#FFD84A', furnC: '#3E7BD6', wood: '#6B4A2E',
+    floorA: '#1E3D2C', floorB: '#1A3627', floorLine: '#12291F', rug: '#4A3A2C', rugEdge: '#33271D', rugW: 1.55,
+    ...ROAD, roadA: '#C9601A', roadB: '#C05A16', groove: '#9A4410', seam: '#6E2E06', wallA: '#BE5A12', wallB: '#B55410', wallTop: '#E08A3C',
     fog: '#1B2350', fogDensity: 4.6,
     tint: '#0A1030', tintAlpha: 0.5,
-    night: 1, stars: 1, clouds: 0.25,
+    night: 1, stars: 1,
   },
 ];
 
@@ -51,19 +58,19 @@ export const AMBIENTS = RAW.map((raw) => {
   return out;
 });
 
-/** Ambient used by a level (1-based): 1 day, 2 sunset, 3 night, 4 day… */
+/** Room used by a level (1-based): 1 bedroom, 2 living room, 3 kitchen, 4 garden, 5 bedroom… */
 export const ambientIndexForLevel = (level) => (level - 1) % AMBIENTS.length;
 
-/** Blend two ambients and add ready-to-use css strings (`css.skyTop`, …). */
+/** Blend two rooms and add ready-to-use css strings (`css.skyTop`, …). */
 export function blendAmbients(a, b, t) {
   const out = { css: {} };
   for (const k of Object.keys(a)) {
-    if (k === 'name') continue;
     const va = a[k], vb = b[k];
-    out[k] = Array.isArray(va) ? mixRgb(va, vb, t) : lerp(va, vb, t);
+    if (typeof va === 'string') out[k] = t < 0.5 ? va : vb;
+    else out[k] = Array.isArray(va) ? mixRgb(va, vb, t) : lerp(va, vb, t);
   }
-  out.name = t < 0.5 ? a.name : b.name;
   for (const k of COLOR_KEYS) out.css[k] = rgb(out[k]);
-  out.css.wallOuter = rgb(shade(out.wallA, -0.35));
+  out.css.wallOuter = rgb(shade(out.wallA, -0.3));
+  out.css.floorDeep = rgb(shade(out.floorB, -0.35));
   return out;
 }

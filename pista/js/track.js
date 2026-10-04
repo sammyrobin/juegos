@@ -11,7 +11,15 @@ export const LANES = 3;
 export const LANE_X = [-2 / 3, 0, 2 / 3];
 export const RUMBLE = 3;           // segments per color band
 export const LEVEL_LEN = 2400;     // meters per level
-export const WALL_H = 150;         // height of the blue side walls
+export const WALL_H = 150;         // height of the orange side rails
+export const PIECE = 10;           // segments per plastic track piece (a joint between pieces)
+export const BANK_H = 900;         // how much the outer edge rises in a fully banked curve
+export const TABLE_W = 4.2;        // table top half-width, in road half-widths
+export const TABLE_DROP = 1500;    // from a table top down to the floor
+
+// Jump section layout (segments from the start of the section): the track runs on a
+// table, a ramp launches the car over the gap and the next table catches it.
+export const JUMP = { tableFrom: 4, ramp: 34, gapFrom: 38, gapTo: 51, tableTo: 104 };
 
 export const levelAt = (index) => 1 + Math.floor(index / LEVEL_LEN);
 
@@ -65,32 +73,67 @@ export class Track {
     return n ? this.segments[n - 1].p2.world.y : 0;
   }
 
-  addSegment(curve, y) {
+  addSegment(curve, y, bank = 0) {
     const index = this.next;
-    const point = (py, pz) => ({ world: { x: 0, y: py, z: pz }, camera: { x: 0, y: 0, z: 0 }, screen: { x: 0, y: 0, w: 0, scale: 0 } });
+    const n = this.segments.length;
+    const prevBank = n ? this.segments[n - 1].p2.bank : 0;
+    const point = (py, pz, b) => ({ world: { x: 0, y: py, z: pz }, bank: b, camera: { x: 0, y: 0, z: 0 }, screen: { x: 0, y: 0, w: 0, b: 0, scale: 0 } });
     this.segments.push({
       index,
-      p1: point(this.lastY(), index * SEG),
-      p2: point(y, (index + 1) * SEG),
+      p1: point(this.lastY(), index * SEG, prevBank),
+      p2: point(y, (index + 1) * SEG, bank),
       curve,
+      bank,
       band: Math.floor(index / RUMBLE) % 2,
+      joint: index % PIECE === 0,
       items: [],
       hole: null,
       gap: false,
+      table: false,
+      face: false,
+      baseY: null,
       start: false,
       fog: 0,
       visible: false,
     });
   }
 
-  /** Classic road builder: ease into a curve, hold it, ease out, while changing height by dy. */
-  addRoad(enter, hold, leave, curve, dy) {
+  /**
+   * Classic road builder: ease into a curve, hold it, ease out, while changing height by dy.
+   * `banking` tilts the road into the curve (0 flat … 1 fully banked).
+   */
+  addRoad(enter, hold, leave, curve, dy, banking = 0.3) {
     const startY = this.lastY();
     const endY = startY + dy;
     const total = enter + hold + leave;
-    for (let n = 0; n < enter; n++) this.addSegment(easeIn(0, curve, n / enter), easeInOut(startY, endY, n / total));
-    for (let n = 0; n < hold; n++) this.addSegment(curve, easeInOut(startY, endY, (enter + n) / total));
-    for (let n = 0; n < leave; n++) this.addSegment(easeOut(curve, 0, n / leave), easeInOut(startY, endY, (enter + hold + n) / total));
+    const bankOf = (c) => clamp(c / 6, -1, 1) * banking;
+    const add = (c, k) => this.addSegment(c, easeInOut(startY, endY, k), bankOf(c));
+    for (let n = 0; n < enter; n++) add(easeIn(0, curve, n / enter), n / total);
+    for (let n = 0; n < hold; n++) add(curve, (enter + n) / total);
+    for (let n = 0; n < leave; n++) add(easeOut(curve, 0, n / leave), (enter + hold + n) / total);
+  }
+
+  /**
+   * Jump between two tables: the floor under the gap is TABLE_DROP lower, and the
+   * first segment of the far table rises steeply, which paints as the table's front.
+   */
+  shapeJump(from) {
+    const tableY = this.get(from).p1.world.y;
+    for (let i = from + JUMP.tableFrom; i < from + JUMP.tableTo; i++) {
+      const seg = this.get(i);
+      if (i >= from + JUMP.gapFrom && i < from + JUMP.gapTo) {
+        seg.gap = true;
+        seg.baseY = tableY;
+        if (i > from + JUMP.gapFrom) seg.p1.world.y = tableY - TABLE_DROP;
+        seg.p2.world.y = tableY - TABLE_DROP;
+      } else {
+        seg.table = true;
+      }
+    }
+    const face = this.get(from + JUMP.gapTo);
+    face.face = true;
+    face.baseY = tableY;
+    face.p1.world.y = tableY - TABLE_DROP;
   }
 
   /** A random height change that keeps the track within ±MAX_HEIGHT. */
@@ -123,7 +166,7 @@ export class Track {
     let kind;
     if (!this.menu && inLevel > LEVEL_LEN * 0.4 && !this.loopLevels.has(level)) kind = 'loop';
     else if (this.sections % 6 === 0) kind = 'jump';
-    else kind = pick(['straight', 'curve', 'curve', 'scurve', 'hill', 'curvehill', 'curvehill']);
+    else kind = pick(['straight', 'curve', 'curve', 'banked', 'scurve', 'hill', 'curvehill', 'curvehill']);
 
     const side = () => (Math.random() < 0.5 ? -1 : 1);
     switch (kind) {
@@ -133,12 +176,17 @@ export class Track {
         break;
       case 'jump':
         this.addRoad(15, 80, 15, 0, 0);
+        this.shapeJump(from);
         break;
       case 'straight':
         this.addRoad(10, randInt(30, 60), 10, 0, 0);
         break;
       case 'curve':
         this.addRoad(randInt(20, 35), randInt(35, 70), randInt(20, 35), side() * rand(0.55, 1) * d.curve, 0);
+        break;
+      case 'banked':
+        // Tight, fully banked curve: stronger than a normal one, but the tilt holds the car.
+        this.addRoad(25, randInt(50, 80), 25, side() * rand(1.1, 1.35) * d.curve, 0, 1);
         break;
       case 'scurve': {
         const s = side();

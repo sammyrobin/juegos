@@ -22,7 +22,34 @@ export class UI {
     };
     this.last = {};
     this.touchMode = window.matchMedia('(pointer: coarse)').matches;
+    this.buildCars();
     this.drawCarCards();
+  }
+
+  /**
+   * One blister pack per car: race number, the car under a plastic bubble and three
+   * stat bars. No names: cars are told apart by color, number and stats.
+   */
+  buildCars() {
+    const box = $('cars');
+    box.textContent = '';
+    PLAYER_CARS.forEach((spec, i) => {
+      const label = document.createElement('label');
+      label.className = 'car-option';
+      label.style.setProperty('--car', spec.body);
+      label.style.setProperty('--car-dark', spec.dark);
+      const stats = ['speed', 'accel', 'handling'].map((k) => {
+        const pips = Array.from({ length: 5 }, (_, n) => `<i${n < spec.stats[k] ? ' class="on"' : ''}></i>`).join('');
+        return `<span class="stat"><span class="stat-name">${t.stats[k]}</span><span class="pips">${pips}</span></span>`;
+      }).join('');
+      label.innerHTML = `<input type="radio" name="car" value="${i}">`
+        + '<span class="blister" aria-hidden="true"><span class="blister-hole"></span>'
+        + `<span class="blister-num">${spec.num}</span>`
+        + '<span class="blister-window"><canvas width="240" height="100"></canvas><span class="blister-bubble"></span></span>'
+        + `<span class="stats">${stats}</span></span>`;
+      label.querySelector('input').setAttribute('aria-label', t.carLabel(spec.num, t.colors[spec.color], spec.stats));
+      box.append(label);
+    });
   }
 
   drawCarCards() {
@@ -31,13 +58,11 @@ export class UI {
       const ctx = canvas.getContext('2d');
       const img = renderCarSide(PLAYER_CARS[i], canvas.width * 0.92);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'rgba(0,0,0,.18)';
+      ctx.fillStyle = 'rgba(0,0,0,.22)';
       ctx.beginPath();
       ctx.ellipse(canvas.width / 2, canvas.height * 0.9, canvas.width * 0.38, canvas.height * 0.06, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.drawImage(img, canvas.width * 0.04, canvas.height * 0.94 - img.height);
-      const input = label.querySelector('input');
-      input.setAttribute('aria-label', t.carLabel(t.cars[i].name, t.cars[i].desc));
     });
   }
 

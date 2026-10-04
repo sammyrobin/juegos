@@ -1,6 +1,7 @@
 // The player's car: lateral steering with inertia, curve push (centrifugal force),
 // side walls, automatic acceleration, jumps and the timers for crash, skid and nitro.
 
+import { PLAYER_CARS } from './cars.js';
 import { CAR_W } from './obstacles.js';
 import { ROAD_W } from './track.js';
 import { approach, clamp, smooth } from './util.js';
@@ -11,13 +12,27 @@ export const WALL_LIMIT = 1 - CAR_W / 2 / ROAD_W - 0.03;
 export const NITRO_TIME = 3.2;
 export const NITRO_BOOST = 1.4;
 
+/**
+ * How a car's stats (1…5) change the driving: top speed, how fast it gets there,
+ * and how quickly it steers and resists the push of the curves.
+ */
+export function handlingOf(car) {
+  const { speed, accel, handling } = PLAYER_CARS[car].stats;
+  return {
+    top: 1 + 0.035 * (speed - 4),
+    accel: 0.7 + 0.12 * (accel - 3),
+    steer: 0.84 + 0.08 * (handling - 2),
+    grip: 1.25 - 0.12 * (handling - 2),
+  };
+}
+
 export class Player {
   constructor() {
     this.reset(0);
   }
 
   reset(car) {
-    this.car = car;
+    this.setCar(car);
     this.x = 0;
     this.vx = 0;
     this.alt = 0;
@@ -33,6 +48,11 @@ export class Player {
     this.scraping = false;
   }
 
+  setCar(car) {
+    this.car = car;
+    this.feel = handlingOf(car);
+  }
+
   get airborne() { return this.alt > 0 || this.vy > 0; }
 
   get boosting() { return this.nitro > 0; }
@@ -46,27 +66,30 @@ export class Player {
    * steer: -1 … 1 from the input (or autopilot). curve: curve of the segment under the car.
    * Returns 'land' when the car touches the ground after a jump.
    */
-  update(dt, steer, curve, maxSpeed, controllable = true) {
+  update(dt, steer, curve, maxSpeed, controllable = true, bank = 0) {
     let event = null;
+    const feel = this.feel;
+    maxSpeed *= feel.top;
 
     // Speed: the car accelerates by itself up to the level's top speed (more with nitro).
     const target = this.fall > 0 ? 0 : this.boosting ? maxSpeed * NITRO_BOOST : maxSpeed;
-    if (this.speed < target) this.speed = Math.min(target, this.speed + (target * 0.24 + 900) * dt);
+    if (this.speed < target) this.speed = Math.min(target, this.speed + (target * 0.24 + 900) * feel.accel * dt);
     else this.speed = approach(this.speed, target, 5200 * dt);
 
     // Steering with a little inertia; faster cars also steer faster so high levels stay fair.
     const ratio = this.speed / 10000;
-    const steerRate = 2.2 + 0.75 * Math.min(ratio, 1.45);
+    const steerRate = (2.2 + 0.75 * Math.min(ratio, 1.45)) * feel.steer;
     let input = controllable && this.fall <= 0 ? steer : 0;
     if (this.skid > 0) input = input * 0.25 + Math.sin(this.skid * 22) * 0.9;
     if (this.airborne) input *= 0.6;
     this.vx += (input * steerRate - this.vx) * smooth(12, dt);
     this.x += this.vx * dt;
 
-    // Curves push the car outwards, harder the faster it goes.
-    if (!this.airborne) this.x -= dt * curve * Math.min(ratio * ratio, 1.6) * CENTRIFUGAL;
+    // Curves push the car outwards, harder the faster it goes; banking holds it in.
+    const hold = 1 - 0.65 * Math.min(1, Math.abs(bank));
+    if (!this.airborne) this.x -= dt * curve * Math.min(ratio * ratio, 1.6) * CENTRIFUGAL * feel.grip * hold;
 
-    // Blue walls: the car scrapes along them and loses some speed.
+    // Side rails: the car scrapes along them and loses some speed.
     this.scraping = false;
     if (Math.abs(this.x) > WALL_LIMIT) {
       this.x = Math.sign(this.x) * WALL_LIMIT;

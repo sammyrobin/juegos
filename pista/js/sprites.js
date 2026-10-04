@@ -1,5 +1,5 @@
 // Pickups, obstacles and scenery, pre-rendered once to off-screen canvases so each frame
-// only scales bitmaps. Every sprite gets one tinted copy per ambient (day, sunset, night).
+// only scales bitmaps. Every sprite gets one tinted copy per room (the garden is at night).
 
 import { AMBIENTS } from './palette.js';
 import { PLAYER_CARS, RIVAL_CARS, renderCarRear } from './cars.js';
@@ -44,12 +44,124 @@ const BUILDERS = {
     polygon(g, [50, 6, 82, 108, 18, 108], null, INK, 6);
   }),
 
-  tree: () => draw(256, 340, (g) => {
-    roundRect(g, 112, 170, 32, 164, 10, '#FFF3E3', INK, 7);
-    g.fillStyle = '#DD0200'; for (let y = 184; y < 330; y += 36) g.fillRect(115, y, 26, 14);
-    g.beginPath(); g.arc(128, 116, 104, 0, Math.PI * 2); g.fillStyle = '#34A853'; g.fill(); g.lineWidth = 8; g.strokeStyle = INK; g.stroke();
-    g.beginPath(); g.arc(128, 116, 70, 0.3, Math.PI * 1.6); g.lineWidth = 12; g.strokeStyle = '#7ED957'; g.stroke();
-    g.beginPath(); g.arc(128, 116, 36, 2, Math.PI * 3.2); g.stroke();
+  // ---- giant things of each room (the car is toy sized) ----
+  books: () => draw(300, 250, (g) => {
+    const books = [[260, 44, '#E85D75'], [230, 36, '#4F7CE0'], [270, 48, '#F2C14E'], [210, 34, '#34A853'], [245, 42, '#7B3FE4']];
+    let y = 246;
+    books.forEach(([w, h, c], i) => {
+      const x = 20 + (i % 2) * 18;
+      y -= h;
+      roundRect(g, x, y, w, h, 6, c, INK, 6);
+      g.fillStyle = '#FFF3E3'; g.fillRect(x + w - 40, y + 8, 24, h - 16);
+      g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(x + 14, y + h - 10, w - 60, 4);
+    });
+  }),
+
+  crayon: () => draw(90, 360, (g) => {
+    roundRect(g, 14, 90, 62, 266, 10, '#1F4BFF', INK, 6);
+    polygon(g, [14, 92, 45, 8, 76, 92], '#1F4BFF', INK, 6);
+    g.fillStyle = '#FFF3E3'; g.fillRect(17, 150, 56, 120);
+    g.fillStyle = '#1F4BFF'; g.fillRect(17, 150, 56, 10); g.fillRect(17, 260, 56, 10);
+    g.strokeStyle = INK; g.lineWidth = 6; g.strokeRect(14, 150, 62, 120);
+    for (let y = 185; y < 250; y += 26) { g.beginPath(); g.arc(45, y, 7, 0, Math.PI * 2); g.fill(); }
+  }),
+
+  ball: () => draw(240, 240, (g) => {
+    g.save(); g.beginPath(); g.arc(120, 120, 112, 0, Math.PI * 2); g.clip();
+    const cols = ['#DD0200', '#FFFFFF', '#1F4BFF', '#FFFFFF', '#FFCC00', '#FFFFFF'];
+    cols.forEach((c, i) => { g.fillStyle = c; g.beginPath(); g.moveTo(120, 120); g.arc(120, 120, 120, (i / 6) * Math.PI * 2 - 0.3, ((i + 1) / 6) * Math.PI * 2 - 0.3); g.fill(); });
+    g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.ellipse(80, 70, 30, 16, -0.6, 0, Math.PI * 2); g.fill();
+    g.restore();
+    g.beginPath(); g.arc(120, 120, 112, 0, Math.PI * 2); g.lineWidth = 7; g.strokeStyle = INK; g.stroke();
+  }),
+
+  cushion: () => draw(320, 200, (g) => {
+    g.beginPath();
+    g.moveTo(20, 40); g.quadraticCurveTo(160, 10, 300, 40); g.quadraticCurveTo(320, 110, 300, 180);
+    g.quadraticCurveTo(160, 200, 20, 180); g.quadraticCurveTo(0, 110, 20, 40); g.closePath();
+    g.fillStyle = '#2F8A78'; g.fill(); g.lineWidth = 7; g.strokeStyle = INK; g.stroke();
+    g.fillStyle = '#F2C14E';
+    for (let x = 60; x < 280; x += 60) for (let y = 70; y < 170; y += 50) { g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill(); }
+  }),
+
+  mug: () => draw(260, 240, (g) => {
+    g.beginPath(); g.arc(200, 120, 44, -1.2, 1.2); g.lineWidth = 22; g.strokeStyle = INK; g.stroke();
+    g.lineWidth = 12; g.strokeStyle = '#F2F2F2'; g.stroke();
+    roundRect(g, 20, 24, 180, 210, 22, '#F2F2F2', INK, 7);
+    g.beginPath(); g.ellipse(110, 30, 88, 16, 0, 0, Math.PI * 2); g.fillStyle = '#6B3A1E'; g.fill(); g.lineWidth = 6; g.stroke();
+    g.fillStyle = '#DD0200'; g.fillRect(24, 110, 172, 30);
+    g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(150, 50, 30, 170);
+  }),
+
+  plant: () => draw(260, 360, (g) => {
+    for (const [a, l] of [[-0.9, 180], [-0.45, 220], [0, 240], [0.45, 215], [0.9, 170]]) {
+      g.save(); g.translate(130, 220); g.rotate(a);
+      g.beginPath(); g.ellipse(0, -l / 2, 28, l / 2, 0, 0, Math.PI * 2);
+      g.fillStyle = '#34A853'; g.fill(); g.lineWidth = 6; g.strokeStyle = INK; g.stroke();
+      g.beginPath(); g.moveTo(0, -8); g.lineTo(0, -l + 20); g.lineWidth = 4; g.strokeStyle = '#1E6B34'; g.stroke();
+      g.restore();
+    }
+    polygon(g, [50, 220, 210, 220, 188, 354, 72, 354], '#D2693C', INK, 7);
+    roundRect(g, 40, 212, 180, 26, 8, '#E07A4A', INK, 6);
+  }),
+
+  apple: () => draw(240, 250, (g) => {
+    g.beginPath();
+    g.moveTo(120, 62); g.bezierCurveTo(60, 20, 0, 70, 20, 150); g.bezierCurveTo(40, 230, 100, 250, 120, 226);
+    g.bezierCurveTo(140, 250, 200, 230, 220, 150); g.bezierCurveTo(240, 70, 180, 20, 120, 62); g.closePath();
+    g.fillStyle = '#DD0200'; g.fill(); g.lineWidth = 7; g.strokeStyle = INK; g.stroke();
+    roundRect(g, 112, 16, 14, 52, 5, '#6B3A1E', INK, 5);
+    g.beginPath(); g.ellipse(160, 40, 34, 14, -0.5, 0, Math.PI * 2); g.fillStyle = '#34A853'; g.fill(); g.lineWidth = 5; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.ellipse(70, 110, 16, 30, 0.3, 0, Math.PI * 2); g.fill();
+  }),
+
+  orange: () => draw(240, 240, (g) => {
+    g.beginPath(); g.arc(120, 128, 106, 0, Math.PI * 2); g.fillStyle = '#FF9500'; g.fill(); g.lineWidth = 7; g.strokeStyle = INK; g.stroke();
+    g.fillStyle = 'rgba(0,0,0,.08)'; for (let i = 0; i < 30; i++) { g.beginPath(); g.arc(50 + (i * 37) % 140, 70 + (i * 53) % 120, 4, 0, Math.PI * 2); g.fill(); }
+    g.beginPath(); g.ellipse(130, 26, 30, 12, 0.3, 0, Math.PI * 2); g.fillStyle = '#34A853'; g.fill(); g.lineWidth = 5; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.ellipse(80, 90, 22, 14, -0.6, 0, Math.PI * 2); g.fill();
+  }),
+
+  cereal: () => draw(240, 330, (g) => {
+    roundRect(g, 20, 10, 200, 316, 8, '#FFCC00', INK, 7);
+    roundRect(g, 38, 40, 164, 110, 12, '#DD0200', INK, 6);
+    const pts = [];
+    for (let i = 0; i < 10; i++) { const r = i % 2 ? 18 : 42, a = -Math.PI / 2 + (i * Math.PI) / 5; pts.push(120 + Math.cos(a) * r, 97 + Math.sin(a) * r); }
+    polygon(g, pts, '#FFF3E3', INK, 6);
+    g.beginPath(); g.ellipse(120, 240, 76, 44, 0, 0, Math.PI * 2); g.fillStyle = '#FFFFFF'; g.fill(); g.lineWidth = 6; g.stroke();
+    for (const [x, y] of [[92, 230], [120, 222], [148, 234], [106, 252], [136, 254]]) { g.beginPath(); g.arc(x, y, 12, 0, Math.PI * 2); g.fillStyle = '#E8A33D'; g.fill(); g.lineWidth = 4; g.stroke(); }
+  }),
+
+  flower: () => draw(220, 380, (g) => {
+    roundRect(g, 102, 110, 16, 266, 6, '#2E8B3A', INK, 5);
+    g.beginPath(); g.ellipse(146, 250, 40, 14, -0.5, 0, Math.PI * 2); g.fillStyle = '#34A853'; g.fill(); g.lineWidth = 5; g.strokeStyle = INK; g.stroke();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      g.beginPath(); g.ellipse(110 + Math.cos(a) * 48, 100 + Math.sin(a) * 48, 36, 22, a, 0, Math.PI * 2);
+      g.fillStyle = '#E85D9E'; g.fill(); g.lineWidth = 5; g.stroke();
+    }
+    g.beginPath(); g.arc(110, 100, 34, 0, Math.PI * 2); g.fillStyle = '#FFD84A'; g.fill(); g.lineWidth = 6; g.stroke();
+  }),
+
+  mushroom: () => draw(240, 230, (g) => {
+    roundRect(g, 88, 100, 64, 126, 20, '#FFF3E3', INK, 6);
+    g.beginPath(); g.moveTo(10, 118); g.quadraticCurveTo(120, -40, 230, 118); g.closePath();
+    g.fillStyle = '#DD0200'; g.fill(); g.lineWidth = 7; g.strokeStyle = INK; g.stroke();
+    for (const [x, y, r] of [[70, 80, 16], [130, 50, 18], [180, 90, 13], [110, 100, 10]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = '#FFFFFF'; g.fill(); }
+  }),
+
+  rock: () => draw(260, 170, (g) => {
+    polygon(g, [10, 166, 30, 70, 90, 20, 170, 30, 230, 80, 252, 166], '#8A8F99', INK, 7);
+    polygon(g, [90, 20, 110, 80, 170, 30], '#A5AAB3', null);
+    g.fillStyle = 'rgba(0,0,0,.15)'; g.fillRect(40, 130, 180, 8);
+  }),
+
+  // Toy marker post along the rails (indoors).
+  post: () => draw(80, 300, (g) => {
+    roundRect(g, 10, 272, 60, 24, 6, '#1F4BFF', INK, 5);
+    roundRect(g, 30, 30, 20, 246, 6, '#FFFFFF', INK, 5);
+    g.fillStyle = '#DD0200'; for (let y = 50; y < 270; y += 44) g.fillRect(33, y, 14, 20);
+    polygon(g, [50, 32, 78, 44, 50, 58], '#FFCC00', INK, 4);
   }),
 
   blocks: () => draw(256, 300, (g) => {
@@ -94,11 +206,12 @@ const BUILDERS = {
     g.font = `900 44px ${SYSTEM_BOLD}`; g.fillStyle = '#FFCC00'; g.strokeText('→ → →', 186, 150); g.fillText('→ → →', 186, 150);
   }),
 
-  lamp: () => draw(140, 440, (g) => {
-    roundRect(g, 60, 40, 18, 396, 6, '#50535A', INK, 6);
-    roundRect(g, 40, 424, 58, 14, 4, '#50535A', INK, 5);
-    roundRect(g, 14, 18, 110, 30, 12, '#50535A', INK, 6);
-    roundRect(g, 26, 40, 86, 12, 5, '#FFF6C9', INK, 4);
+  // Garden stake light (the night level).
+  lamp: () => draw(120, 300, (g) => {
+    roundRect(g, 52, 90, 16, 206, 5, '#3A3A40', INK, 5);
+    roundRect(g, 26, 40, 68, 60, 14, '#FFF6C9', INK, 6);
+    roundRect(g, 18, 26, 84, 20, 8, '#3A3A40', INK, 5);
+    g.fillStyle = 'rgba(0,0,0,.2)'; for (let x = 40; x < 90; x += 16) g.fillRect(x, 46, 4, 50);
   }),
 
   tires: () => draw(260, 220, (g) => {
@@ -111,20 +224,6 @@ const BUILDERS = {
       tire(x, y - 8);
     }
   }),
-};
-
-/** World widths (road half-width is 2200) and whether night lights them. */
-export const SPRITE_INFO = {
-  coin: { w: 320 },
-  nitro: { w: 420 },
-  cone: { w: 250 },
-  tree: { w: 1300 },
-  blocks: { w: 1100 },
-  flag: { w: 520 },
-  sign: { w: 2200 },
-  sign2: { w: 2200 },
-  lamp: { w: 420, light: true },
-  tires: { w: 900 },
 };
 
 export class SpriteBank {
